@@ -3,8 +3,8 @@ MIT 16.413 final project repo for Aneesa &amp; Anjali
 ## To do:
 - define predicates, actions, and effects (problem file/domain) - Anjali
 - ~~choose activity planner~~ graph plan w/FF heuristic
-- test out parsing example PDDL files
-- skeleton of PDDL planner
+- test out parsing example PDDL files - Aneesa
+- skeleton of PDDL planner - Aneesa (if time)
 - set up simulation (need access to sim first)
 
 ## Questions:
