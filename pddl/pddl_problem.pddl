@@ -19,9 +19,10 @@
         (open dwr)
     )
 
-    (:goal
+    (:goal (and
         (contains sugar_box countertop)
         (contains spam_box dwr)
         (not (open dwr))
+        )
     )
 )
