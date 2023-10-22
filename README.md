@@ -37,12 +37,14 @@ MIT 16.413 - Fall 2023
 - **pddl_problem.py** - contains PDDL probelm definition specifying the objects, initial state, and goal state
 
 ### Key Functions
-- **make_relaxed_graph** - constructs a relaxed plan graph
-- **get_cost** - returns the FF heuristic
-- **best_first_search** - runs Best-First Search
-- **extract_plan** - returns the solution
-- **ff_search** - runs Fast Forward search
-- **extend_graph** - figures out what actions we can take next
+- **solve** - runs the specified planner (modular design so we can swap out planners)
+- **_run_ff_planner**
+    - **make_relaxed_graph** - constructs a relaxed plan graph
+    - **get_cost** - returns the FF heuristic
+    - **best_first_search** - runs Best-First Search
+    - **extract_plan** - returns the solution
+    - **ff_search** - runs Fast Forward search
+    - **extend_graph** - figures out what actions we can take next
 
 ### Approach
 [Using slides as reference]
