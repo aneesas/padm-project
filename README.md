@@ -1,4 +1,5 @@
-MIT 16.413 final project repo for Aneesa &amp; Anjali
+Final Project Repo for Aneesa &amp; Anjali  
+MIT 16.413 - Fall 2023    
 
 # Planning & Progress
 ### To do:
@@ -13,6 +14,14 @@ MIT 16.413 final project repo for Aneesa &amp; Anjali
 
 ### High-Level Approach
 - Architecture should make it easy to swap out planners
+
+### Timeline
+- 10/2 - 10/20: Activity Planning
+    - Deliverable Due: 10/21
+- 10/23 - 11/17: Motion Planning
+    - Deliverable Due: 11/18
+- 11/27 - 12/11: Trajectory Optimization
+    - Deliverable Due: 12/12??
 
 
 # Deliverable 1: Activity Planning
