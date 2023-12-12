@@ -1,28 +1,6 @@
 Final Project Repo for Aneesa &amp; Anjali  
 MIT 16.413 - Fall 2023    
 
-# Planning & Progress
-### To do:
-- ~~define predicates, actions, and effects (problem file/domain) - Anjali~~
-- ~~choose activity planner~~ graph plan w/FF heuristic
-- ~~test out parsing example PDDL files - Aneesa~~
-- ~~skeleton of PDDL planner - Aneesa (if time)~~
-- set up simulation (need access to sim first)
-
-### Questions:
-- Simulation?
-
-### High-Level Approach
-- Architecture should make it easy to swap out planners
-
-### Timeline
-- 10/2 - 10/20: Activity Planning
-    - Deliverable Due: 10/21
-- 10/23 - 11/17: Motion Planning
-    - Deliverable Due: 11/18
-- 11/27 - 12/11: Trajectory Optimization
-    - Deliverable Due: 12/12??
-
 
 # Deliverable 1: Activity Planning
 ### Assumptions
@@ -57,8 +35,24 @@ MIT 16.413 - Fall 2023
 - We had to utilize 'supertypes' in order to generalize our actions to handle different object types in the same way
 
 # Deliverable 2: Motion Planning
-### Something
-- asdf
+### Assumptions
+- The robot doesn't need to decide where exactly to place the items once picked up; that is, the location of the countertop and the drawer are known.
+- 
+
+### Approach
+We use RRT as the backbone of the motion planner.
+
+- Outline steps of RRT algorithm
+- Explain creation of goal "region" and tolerance used
+- Explain collision-checking
+- Explain arm dynamics (inverse kinematics)
+
+### Key Functions
+Connect to steps in approach above, or just name them in Approach section
+
+### Challenges
+- Working with the entirely undocumented sim :)
+
 
 # Deliverable 3: Trajectory Optimization
 ### Something
