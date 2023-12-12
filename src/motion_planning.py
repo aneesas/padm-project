@@ -57,7 +57,7 @@ def steer_panda(world: World, x_from: Node, x_to: Node, d: float=0.5) -> Node:
     tool_link = pb.link_from_name(world.robot, "panda_hand")
     ik_joints = ik.get_ik_joints(world.robot, PANDA_INFO, tool_link)
     # TODO how do I get 
-    new_pose = (0., 0., 0.)
+    new_pose = ()
     return Node(new_pose, parent=x_from)
 
 def near(pose1: tuple, pose2: tuple, tolerance=0.1) -> bool:

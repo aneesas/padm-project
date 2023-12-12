@@ -32,7 +32,8 @@ MIT 16.413 - Fall 2023
 - When no search progress can be made, we switch to Best First Search
 
 ### Challenges
-- We had to utilize 'supertypes' in order to generalize our actions to handle different object types in the same way
+- We tried to utilize 'supertypes' in order to generalize our actions to handle different object types in the same way, but ran into issues (explain issues)
+- Tried different PDDL library in order to use 'supertypes' but had to switch back (explain)
 
 # Deliverable 2: Motion Planning
 ### Assumptions
@@ -51,9 +52,9 @@ We use RRT as the backbone of the motion planner.
 Connect to steps in approach above, or just name them in Approach section
 
 ### Challenges
-- Working with the entirely undocumented sim :)
 - Difficult to parse what the simulator functions were actually doing vs. what their arguments suggested
     - Ex: `add_ycb` in the example takes a `counter` argument, but the `COUNTERS` defined in the given `utils.py` file don't have corresponding `Surface` objects, so any `counter` argument given leads to the same pose.
+- Provided sampling function gives angles in configuration space (joint angles), not in 3D space so wrote a new sampling function (explain)
 
 # Deliverable 3: Trajectory Optimization
 ### Something
