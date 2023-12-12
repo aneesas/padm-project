@@ -52,7 +52,8 @@ Connect to steps in approach above, or just name them in Approach section
 
 ### Challenges
 - Working with the entirely undocumented sim :)
-
+- Difficult to parse what the simulator functions were actually doing vs. what their arguments suggested
+    - Ex: `add_ycb` in the example takes a `counter` argument, but the `COUNTERS` defined in the given `utils.py` file don't have corresponding `Surface` objects, so any `counter` argument given leads to the same pose.
 
 # Deliverable 3: Trajectory Optimization
 ### Something

@@ -1,6 +1,6 @@
 ### Motion planning helpers
 class Node():
-    """Simple node to keep track of parentage"""
+    """Simple node to keep track of 3-DOF pose and parentage"""
     def __init__(self, pose: tuple, parent: object=None):
         self._pose = pose
         self._parent = parent
