@@ -10,14 +10,25 @@ sys.path.extend(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()),
 
 from src.world import World
 
+import pybullet_tools.utils as pb
+
 ### Helper functions
 
 
 ### RRT Planner
 
 def sample(world: World):
-    # TODO can I get bounds from world?
+    # TODO I want to operate in world frame
+    # get_joint_positions returns in world frame
     return
+
+# TODO
+def get_sample_fn(body, joints, custom_limits={}, **kwargs):
+    lower_limits, upper_limits = pb.get_custom_limits(body, joints, custom_limits, circular_limits=CIRCULAR_LIMITS)
+    generator = pb.interval_generator(lower_limits, upper_limits, **kwargs)
+    def fn():
+        return tuple(next(generator))
+    return fn
 
 def in_obstacle(world: World, pose: tuple):
     # TODO
