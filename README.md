@@ -58,6 +58,13 @@ Strategies employed to address these challenges involved:
 - Extensive testing and validation of the PDDL parsing functionalities.
 - Experimenting with different planning algorithms and heuristics to optimize the solution process. The structure of the code allows for ease in switching between different planners if we were to implement other kinds as well.
 
+## Example Result
+Initial State:  {('clear_gripper',), ('countertop_has_spambox',), ('at_drawer',), ('burner_has_sugarbox',), ('clear_drawer',)}
+
+Goal State:  {('countertop_has_sugarbox',), ('drawer_has_spambox',)} and not {('open_drawer',)}
+
+Generated Plan: 
+['open_drawer', 'movedtoc', 'pick_up_spamatc', 'movectod', 'put_down_spamatd', 'close_drawer', 'movedtob', 'pick_up_sugaratb', 'movebtoc', 'put_down_sugaratc']  
 
 
 # Deliverable 2: Motion Planning
