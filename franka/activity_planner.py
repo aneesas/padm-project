@@ -2,7 +2,11 @@
 This module implements an ActivityPlanner class that utilizes PDDL_Parser to solve activity planning problems.
 """
 
+import sys
+sys.path.append('../padm-project-2023f/pddl-parser/pddl_parser')
+
 from PDDL import PDDL_Parser
+
 
 class ActivityPlanner:
     """
@@ -164,8 +168,8 @@ class State:
         self.cost = cost
 
 def main():
-    domain_filename = "pddl\pddl_domain_copy.pddl"
-    problem_filename = "pddl\pddl_problem_copy.pddl"
+    domain_filename = "pddl\pddl_domain.pddl"
+    problem_filename = "pddl\pddl_problem.pddl"
     act = ActivityPlanner(domain_filename, problem_filename)
     plan = act.solve()
 
