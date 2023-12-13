@@ -16,7 +16,6 @@
         (countertop_has_spambox)
         (clear_gripper)
         (clear_drawer)
-        (open_drawer)
         (at_drawer)
     )
 
