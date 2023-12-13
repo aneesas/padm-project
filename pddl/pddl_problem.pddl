@@ -12,17 +12,18 @@
     )
 
     (:init
-        (contains sugar_box burner)
-        (contains spam_box countertop)
-        (clear gpr)
-        (clear dwr)
-        (open dwr)
+        (burner_has_sugarbox)
+        (countertop_has_spambox)
+        (clear_gripper)
+        (clear_drawer)
+        (open_drawer)
+        (at_drawer)
     )
 
     (:goal (and
-        (contains sugar_box countertop)
-        (contains spam_box dwr)
-        (not (open dwr))
+        (countertop_has_sugarbox)
+        (drawer_has_spambox)
+        (not (open_drawer))
         )
     )
 )
