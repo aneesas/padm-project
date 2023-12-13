@@ -173,6 +173,8 @@ def main():
     act = ActivityPlanner(domain_filename, problem_filename)
     plan = act.solve()
 
+    print("Initial State: ", set(act.initstate))
+    print("Goal State: ", set(act.positive_goals), "and not", set(act.negative_goals))
     print(plan)
 
 if __name__ == "__main__":
