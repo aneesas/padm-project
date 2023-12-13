@@ -3,37 +3,67 @@ MIT 16.413 - Fall 2023
 
 
 # Deliverable 1: Activity Planning
-### Assumptions
-- There is only one drawer in the environment that we are able to manipulate
-- Each location (burner, countertop, inside of drawer) can only hold one item at a time
-- The robot arm can only hold one item at a time
-- We can abstract away the details of certain actions, e.g., how the gripper picks up different items
+
+This module implements an ActivityPlanner class that serves as a solver for activity planning problems utilizing the Planning Domain Definition Language (PDDL).
+
+## Assumptions in Domain Design
+
+During the design of the domain for activity planning, several assumptions were made to model the problem effectively. Assumptions include:
+- There is only one drawer in the environment that we are able to manipulate.
+- Each location (burner, countertop, inside of drawer) can only hold one item at a time.
+- The robot arm can only hold one item at a time.
+- We can abstract away the details of certain actions, e.g., how the gripper picks up different items.
+
+## Files and Functions Overview
 
 ### Files:
-- **activity_planner.py** - contains logic for parsing the PDDL problem and domain files and running the activity planning algorithm
-- **pddl_domain.py** - contains PDDL domain definition specifying the types, predicates, and actions
-- **pddl_problem.py** - contains PDDL probelm definition specifying the objects, initial state, and goal state
+- `src/activity_planner.py`: Implements the `ActivityPlanner` class that serves as the core of the activity planning functionality.
+- `pddl/pddl_domain.pddl` - Contains the PDDL domain definition including specification of the types, predicates, and actions
+- `pddl/pddl_problem.pddl` - Contains the PDDL problem definition including specification of the objects, initial state, and goal state
+- `padm-project-2023f/pddl-parser/pddl-parser/PDDL.py`: From the pddl-parser library. Contains the PDDL parsing functionalities used to read domain and problem files. Note: We have placed this folder in .gitignore, so the repo would need to be included in order for this code to run properly.
 
-### Key Functions
-- **solve** - runs the specified planner (modular design so we can swap out planners)
-- **_run_ff_planner**
-    - **make_relaxed_graph** - constructs a relaxed plan graph
-    - **get_cost** - returns the FF heuristic
-    - **best_first_search** - runs Best-First Search
-    - **extract_plan** - returns the solution
-    - **ff_search** - runs Fast Forward search
-    - **extend_graph** - figures out what actions we can take next
+### Key Classes and Functions:
 
-### Approach
-[Using slides as reference]
-- For our planner, we first create a relaxed plan graph and run FF on it (searches backwards for a plan)
-- The number of actions in this relaxed plan is used a heuristic to estimate the true cost of achieving the goal
-- Our FF heuristic is used to guide which actions to explore when extending the 'real' plan
-- When no search progress can be made, we switch to Best First Search
+#### ActivityPlanner Class:
+- `__init__(self, domain_file, problem_file)`: Initializes the ActivityPlanner object by parsing domain and problem files using the PDDL_Parser class from the pddl-parser library.
+- `solve(self)`: Generates an activity plan based on the input domain and problem files.
+- `_run_bfs_planner(self)`: Implements a breadth-first search planner to find a solution.
+    - `generate_possible_actions(self, state)`: Generates possible actions based on the current state.
+    - `apply_action(self, state, action)` - Applies an action to the state and generates a new state.
+- `_extract_activity_plan(self, state, plan, path)`: Extracts the activity plan from the final state.
 
-### Challenges
-- We tried to utilize 'supertypes' in order to generalize our actions to handle different object types in the same way, but ran into issues (explain issues)
-- Tried different PDDL library in order to use 'supertypes' but had to switch back (explain)
+#### State Class:
+- `__init__(self, state, parent, action, cost)`: Initializes the State object representing a state in the planning process.
+
+## Approach Used for Plan Generation
+
+The approach for plan generation involves:
+- Parsing the PDDL domain and problem files using the `PDDL_Parser`.
+- Initializing an `ActivityPlanner` object with the parsed information.
+- Utilizing a breadth-first search planner (`_run_bfs_planner`) to find a solution by exploring possible actions and states.
+- Extracting the resulting activity plan through the `_extract_activity_plan` function.
+
+## Challenges Faced and Strategies Employed
+
+During the development of the activity planning module, challenges included:
+- Designing effective predicates, actions, and types to accurately model the domain.
+    - We tried to utilize 'supertypes' in order to generalize our actions to handle different object types in the same way, but we ran into issues. After testing with multiple different pddl parsing libraries, we determined that none of them would efficiently be able to handle 'supertypes'. Thus, we had to switch back to the original library and rewrite our predicates and actions so as to be more explicit and allow for more straightforward parsing.
+    - Replacement/Population of terms in order to quickly check which actions were feasible from a given state proved difficult. We came across many errors and ultimately decided to go with a more robust implementation that removed the need for parameters. This greatly improved our workflow.
+- Ensuring correct parsing of PDDL files and handling errors in case of incorrect file formats or missing information.
+- Implementing our initial planning approach using the FF heuristic proved to be quite complex, so we modified our approach to follow Breadth-First Search instead.
+
+
+Strategies employed to address these challenges involved:
+- Iterative refinement of predicates and actions based on domain understanding.
+- Extensive testing and validation of the PDDL parsing functionalities.
+- Experimenting with different planning algorithms and heuristics to optimize the solution process. The structure of the code allows for ease in switching between different planners if we were to implement other kinds as well.
+
+## Example Result
+    
+
+
+
+
 
 # Deliverable 2: Motion Planning
 ### Assumptions
