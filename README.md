@@ -58,11 +58,6 @@ Strategies employed to address these challenges involved:
 - Extensive testing and validation of the PDDL parsing functionalities.
 - Experimenting with different planning algorithms and heuristics to optimize the solution process. The structure of the code allows for ease in switching between different planners if we were to implement other kinds as well.
 
-## Example Result
-    
-
-
-
 
 
 # Deliverable 2: Motion Planning
