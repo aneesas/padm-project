@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 # Local project code
-# from motion_planning import rrt
+from motion_planning import rrt
 
 # Provided simulator code, which is not set up to be installed as packages
 sys.path.extend(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()),

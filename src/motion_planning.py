@@ -3,14 +3,14 @@ import sys
 import numpy as np
 
 # Local project code
-from src.helpers import Node
+from helpers import Node
 
 # For importing provided simulator code
 sys.path.extend(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()),
                                              *["padm_project_2023f", d])) for d in ["", "pddlstream", "ss-pybullet"])
 
 from src.world import World
-from src.utils import CIRCULAR_LIMITS
+# from src.utils import 
 
 import pybullet_tools.utils as pb
 
@@ -24,7 +24,7 @@ import pybullet_tools.ikfast.ikfast as ik
 
 def get_sample_fn(body, joints, custom_limits={}, **kwargs):
     """Generate a sampling function for arm configurations"""
-    lower_limits, upper_limits = pb.get_custom_limits(body, joints, custom_limits, circular_limits=CIRCULAR_LIMITS)
+    lower_limits, upper_limits = pb.get_custom_limits(body, joints, custom_limits, circular_limits=pb.CIRCULAR_LIMITS)
     generator = pb.interval_generator(lower_limits, upper_limits, **kwargs)
     def fn():
         return tuple(next(generator))
