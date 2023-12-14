@@ -19,34 +19,31 @@ import pybullet_tools.ikfast.ikfast as ik
 
 ### Helper functions
 
-WORLD_BOUNDS = ((), (), ())  # x, y, z--taken from sim
-
-def get_sample_fn(body, joints, custom_limits={}, **kwargs):
-    """Generate a sampling function for arm configurations"""
-    lower_limits, upper_limits = pb.get_custom_limits(body, joints, custom_limits, circular_limits=pb.CIRCULAR_LIMITS)
-    generator = pb.interval_generator(lower_limits, upper_limits, **kwargs)
-    def fn():
-        return tuple(next(generator))
-    return fn
+WORLD_BOUNDS = ((-0.5, 1.0), (-1.8, 1.8), (-1.4, 1.4))  # x, y, z--taken from sim
 
 
-def sample(world: World, bounds=WORLD_BOUNDS):
-    # TODO I want to operate in world frame
-    # get_joint_positions returns in world frame
-    return
+def sample(bounds=WORLD_BOUNDS) -> Node:
+    # Generate random 3D valued Node from given bounds
+    assert len(bounds) == 3
+    min_x, max_x = bounds[0]
+    min_y, max_y = bounds[1]
+    min_z, max_z = bounds[2]
+    rng = np.random.default_rng()
+    x = min_x + rng.random() * (max_x - min_x)
+    y = min_y + rng.random() * (max_y - min_y)
+    z = min_z + rng.random() * (max_z - min_z)
+    return Node(pb.Pose(point=np.array([x, y, z])))
 
 
-def in_obstacle(world: World, pose: tuple):
+def in_obstacle(world: World, pose: np.ndarray):
     # TODO
     return False
 
 
 def distance(node1: Node, node2: Node):
-    """ TODO """
+    """ Assumes nodes have numpy arrays as poses """
     # Calculate Euclidean distance between two nodes
-    pose1 = np.array(node1.pose)
-    pose2 = np.array(node2.pose)
-    return np.linalg.norm(pose2 - pose1)
+    return np.linalg.norm(node2.pose[0] - node1.pose[0])
 
 
 def nearest_node(V: list, node: Node) -> Node:
@@ -62,11 +59,8 @@ def steer_panda(world: World, x_from: Node, x_to: Node, d: float=0.5) -> Node:
     # Only steer d * max allowed distance (so we don't get stuck in
     # some fully-extended configuration that's hard to get out of)
     tool_link = pb.link_from_name(world.robot, "panda_hand")
-    # Let's assume our sample is (position, orientation)
-    position_to = x_to.pose[0]
-    end_pose = pb.multiply(x_from.pose, pb.Pose(point=pb.Point(x=position_to[0],
-                                                               y=position_to[1],
-                                                               z=position_to[2])))
+    # Let's assume our samples are (position, orientation)
+    end_pose = pb.Pose(point=x_to.pose[0], euler=pb.euler_from_quat(x_from.pose[1]))
     interpolated_poses = pb.interpolate_poses(x_from.pose, end_pose, pos_step_size=0.1)
     for i, p in enumerate(interpolated_poses):
         conf = next(ik.closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, p, max_time=0.05), None)
@@ -124,9 +118,6 @@ def rrt(world: World, start_pose, goal_pose, tolerance, max_iterations=1e10, n_g
     # Limit planning time with # of iterations
     num_iterations = 0
 
-    # Create sampling function
-    sampling_function = get_sample_fn(world.robot, world.arm_joints)
-
     path = []
     while num_iterations < max_iterations:
         # Sample from free space to get x_rand
@@ -134,7 +125,7 @@ def rrt(world: World, start_pose, goal_pose, tolerance, max_iterations=1e10, n_g
         if num_iterations % n_goal_bias == 0:
             x_rand = goal_pose
         else:
-            x_rand = sample(world, sampling_function=sampling_function)
+            x_rand = sample()
 
         # If x_rand is in an obstacle, ignore
         # TODO
