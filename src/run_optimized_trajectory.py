@@ -83,8 +83,10 @@ if __name__ == "__main__":
     tool_link = pb.link_from_name(world.robot, "panda_hand")
     pb.wait_for_user()
 
-    for t in len(trajectory[0]):
+    for t in range(len(trajectory[0])):
         joint_values = [trajectory[j, t] for j in range(len(trajectory))]
         pb.set_joint_positions(world.robot, world.arm_joints, joint_values)
         time.sleep(0.1)
 
+    print("Done!")
+    pb.wait_for_user()
