@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 # Local project code
-from motion_planning import rrt, near
+from motion_planning import rrt
 
 # Provided simulator code, which is not set up to be installed as packages
 sys.path.extend(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()),
@@ -78,6 +78,7 @@ if __name__ == "__main__":
     print("Numpy seed:", pb.get_numpy_seed())
 
     world = World(use_gui=True)
+    # world = World(use_gui=False)
 
     # Set up simulation world as expected
     # NOTE: Leaving `counter` argument from example out because it has no effect.
@@ -103,6 +104,24 @@ if __name__ == "__main__":
     # Move from start to sugar box using RRT
     tool_link = pb.link_from_name(world.robot, "panda_hand")
     start_pose = pb.get_link_pose(world.robot, tool_link)
-    rrt_path = rrt(world, start_pose, HAND_POSE3D["sugar"])
+    end_pose = pb.Pose(point=HAND_POSE3D["sugar"], euler=pb.euler_from_quat(start_pose[1]))
+    print("Starting pose = ", start_pose)
+    print("Goal pose = ", end_pose)
+    rrt_path = rrt(world, start_pose, end_pose)
     print("Path received = ")
     print(rrt_path)
+
+    print("\nMoving through returned path...")
+    tool_link = pb.link_from_name(world.robot, "panda_hand")
+    ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
+    for pose in rrt_path:
+        conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
+        if conf is None:
+            print("Something went wrong!!")
+            pb.wait_for_user()
+            break
+        pb.set_joint_positions(world.robot, ik_joints, conf)
+        time.sleep(0.1)
+
+    print("Done!")
+    pb.wait_for_user()

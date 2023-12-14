@@ -10,7 +10,6 @@ sys.path.extend(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()),
                                              *["padm_project_2023f", d])) for d in ["", "pddlstream", "ss-pybullet"])
 
 from src.world import World
-# from src.utils import 
 
 import pybullet_tools.utils as pb
 
@@ -35,7 +34,7 @@ def sample(bounds=WORLD_BOUNDS) -> Node:
     return Node(pb.Pose(point=np.array([x, y, z])))
 
 
-def in_obstacle(world: World, pose: np.ndarray):
+def in_obstacle(world: World, pose: np.ndarray) -> bool:
     # TODO
     return False
 
@@ -62,14 +61,17 @@ def steer_panda(world: World, x_from: Node, x_to: Node, d: float=0.5) -> Node:
     # Let's assume our samples are (position, orientation)
     end_pose = pb.Pose(point=x_to.pose[0], euler=pb.euler_from_quat(x_from.pose[1]))
     interpolated_poses = pb.interpolate_poses(x_from.pose, end_pose, pos_step_size=0.1)
+    valid_poses = []
     for i, p in enumerate(interpolated_poses):
         conf = next(ik.closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, p, max_time=0.05), None)
         if conf is None:
             break
+        else:
+            valid_poses.append(p)
     
     # i represents how far we got into interpolated_poses
     i = int(i * d)
-    new_pose = interpolated_poses[i]
+    new_pose = valid_poses[i]
     return Node(new_pose, parent=x_from)
 
 
@@ -104,7 +106,7 @@ def trace_path(node: Node) -> list:
 
 
 ### RRT Planner
-def rrt(world: World, start_pose, goal_pose, tolerance=0.1, max_iterations=1e10, n_goal_bias=10):
+def rrt(world: World, start_pose: tuple, goal_pose: tuple, tolerance=0.1, max_iterations=1e10, n_goal_bias=10):
     """
     max_iterations (int): limit planning time with number of iterations
     n_goal_bias (int): sample from goal region every n samples
@@ -123,7 +125,7 @@ def rrt(world: World, start_pose, goal_pose, tolerance=0.1, max_iterations=1e10,
         # Sample from free space to get x_rand
         # Try goal-biasing every N samples
         if num_iterations % n_goal_bias == 0:
-            x_rand = goal_pose
+            x_rand = Node(goal_pose)
         else:
             x_rand = sample()
 
@@ -149,7 +151,7 @@ def rrt(world: World, start_pose, goal_pose, tolerance=0.1, max_iterations=1e10,
         V.append(x_new)
 
         # If x_new is in goal region, trace back nodes to x_init to get path
-        if near(x_new, goal_pose, tolerance):
+        if near(x_new.pose, goal_pose, tolerance):
             path = trace_path(x_new)
             break
 
