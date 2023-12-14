@@ -24,8 +24,30 @@ UNIT_POSE2D = (0., 0., 0.)  # x, y, yaw
 INIT_POSE_SUGAR = (0.05, 0.65, np.pi / 4)  # x, y, yaw in world
 INIT_POSE_SPAM = (0.2, 1.1, np.pi / 4)  # x, y, yaw in world
 
-ACTIVITY_LOCATIONS = {
-    
+# TODO I think we only need the right side
+BASE_POSE2D = {
+    "left": np.array([0.85, -0.15, np.pi]),
+    "right": np.array([0.85, 0.6, np.pi])
+}
+HAND_POSE3D = {
+    "drawer_closed": np.array([]),
+    "drawer_open": np.array([]),
+    "drawer_above": np.array([]),
+    "drawer_inside": np.array([]),
+    "counter": np.array([]),
+    "burner": np.array([])
+}
+ACTIVITY_GOAL_LOC = {
+    "open_drawer": "drawer_open",
+    "close_drawer": "drawer_closed",
+    "pick_up_spamatc": "spam",
+    "put_down_spamatd": "drawer_inside",
+    "pick_up_sugaratb": "sugar",
+    "put_down_sugaratc": "counter",
+    "movedtoc": "counter",
+    "movectod": "drawer_above",
+    "movedtob": "burner",
+    "movebtoc": "counter",
 }
 
 # Helper functions from minimal_example.py
@@ -62,27 +84,17 @@ if __name__ == "__main__":
     print("{} pose = {}".format(name_sugar, pose_sugar))
     print("{} pose = {}".format(name_spam, pose_spam))
 
-    print("World now has bodies:")
-    print(world.body_from_name)
+    # Save object goal locations for later
+    HAND_POSE3D["sugar"] = pose_sugar[0] + np.array([0., 0., 0.2])
+    HAND_POSE3D["spam"] = pose_spam[0] + np.array([0., 0., 0.2])
+
     pb.wait_for_user()
 
-    print("pybullet pose for sugar box:")
-    print(pb.get_pose(world.body_from_name[name_sugar]))
-
-    # Scoot robot over for better starting position
-    init_base_pos = pb.get_joint_positions(world.robot, world.base_joints)
-    # Using world coordinate frame, scoot in y-pos direction
-    new_base_pos = np.array(init_base_pos) + np.array([0.0, 0.4, 0.0])
-    pb.set_joint_positions(world.robot, world.base_joints, new_base_pos)
-
-    # Move robot forward to get in gripping range
-    x_goal = 0.85  # got this from playing around in sim
-    x = new_base_pos[0]
-    while x > x_goal:
-        goal_pos = translate_linearly(world, 0.015)
-        pb.set_joint_positions(world.robot, world.base_joints, goal_pos)
-        time.sleep(0.02)  # let's make it look smooth for fun
-        x = goal_pos[0]
+    # Move robot to starting position to get in gripping range
+    pb.set_joint_positions(world.robot, world.base_joints, BASE_POSE2D["left"])
+    pb.wait_for_user()
+    pb.set_joint_positions(world.robot, world.base_joints, BASE_POSE2D["right"])
+    pb.wait_for_user()
 
     # Try to move hand to sugar box
     tool_link = pb.link_from_name(world.robot, "panda_hand")
@@ -93,13 +105,9 @@ if __name__ == "__main__":
     pb.wait_for_user()
     start_pose = pb.get_link_pose(world.robot, tool_link)
     print("Start pose = ", start_pose)
-    pose_sugar_world = pb.get_pose(world.get_body(name_sugar))
-    goal_pose = pb.Pose(point=pose_sugar_world[0], euler=pb.euler_from_quat(start_pose[1]))
+    goal_pose = pb.Pose(point=HAND_POSE3D["sugar"], euler=pb.euler_from_quat(start_pose[1]))
     print("Goal pose = ", goal_pose)
     while conf is not None:
-        # TODO I think these are in robot body pose, FRD maybe based on motion
-        # end_pose = pb.multiply(start_pose, pb.Pose(pb.Point(x=0.05, z=-0.01)))
-        # print("End pose = ", end_pose)
         for i, pose in enumerate(pb.interpolate_poses(start_pose, goal_pose, pos_step_size=0.01)):
             conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
             if i % 10 == 0:
