@@ -29,6 +29,7 @@ BASE_POSE2D = {
     "left": np.array([0.85, -0.15, np.pi]),
     "right": np.array([0.85, 0.6, np.pi])
 }
+
 HAND_POSE3D = {
     "drawer_closed": np.array([]),
     "drawer_open": np.array([]),
@@ -37,6 +38,7 @@ HAND_POSE3D = {
     "counter": np.array([]),
     "burner": np.array([])
 }
+
 ACTIVITY_GOAL_LOC = {
     "open_drawer": "drawer_open",
     "close_drawer": "drawer_closed",

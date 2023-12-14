@@ -1,5 +1,12 @@
 Final Project Repo for Aneesa &amp; Anjali  
-MIT 16.413 - Fall 2023    
+MIT 16.413 - Fall 2023
+
+# Tasks
+- Writeup for trajopt
+- Video of trajopt
+- Locations for HAND_POSE3D in run_simulation
+- How to move objects to gripper??? How to move out of gripper???
+- How to open and close drawer?
 
 
 # Deliverable 1: Activity Planning
