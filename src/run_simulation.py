@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 # Local project code
-from motion_planning import rrt
+from motion_planning import rrt, near
 
 # Provided simulator code, which is not set up to be installed as packages
 sys.path.extend(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()),
@@ -16,18 +16,17 @@ from pybullet_tools.ikfast.ikfast import get_ik_joints, closest_inverse_kinemati
 
 # These are from padm_project_2023f
 from src.world import World
-from src.utils import JOINT_TEMPLATE, BLOCK_SIZES, BLOCK_COLORS, COUNTERS, \
-    ALL_JOINTS, LEFT_CAMERA, CAMERA_MATRIX, CAMERA_POSES, CAMERAS, compute_surface_aabb, \
-    BLOCK_TEMPLATE, name_from_type, GRASP_TYPES, SIDE_GRASP, joint_from_name, \
-    STOVES, TOP_GRASP, randomize, LEFT_DOOR, point_from_pose, translate_linearly, \
-    SUGAR, SPAM
+from src.utils import COUNTERS, compute_surface_aabb, name_from_type, \
+    translate_linearly, SUGAR, SPAM
 
 # Constants
 UNIT_POSE2D = (0., 0., 0.)  # x, y, yaw
-INIT_POSE_SUGAR = (-0.2, 0.65, np.pi / 4)  # x, y, yaw in world
+INIT_POSE_SUGAR = (0.05, 0.65, np.pi / 4)  # x, y, yaw in world
 INIT_POSE_SPAM = (0.2, 1.1, np.pi / 4)  # x, y, yaw in world
-POSE_OPEN_COUNTER = ()
-POSE_DRAWER = ()
+
+ACTIVITY_LOCATIONS = {
+    
+}
 
 # Helper functions from minimal_example.py
 def add_ycb(world, ycb_type, counter=0, **kwargs) -> (str, tuple):
@@ -47,14 +46,6 @@ def pose2d_on_surface(world, entity_name, surface_name, pose2d=UNIT_POSE2D):
     print("[pose2d_on_surface] entity {} pose = {}".format(entity_name, pose))
     return pose
 
-def get_sample_fn(body, joints, custom_limits={}, **kwargs):
-    lower_limits, upper_limits = pb.get_custom_limits(body, joints, custom_limits,
-                                                      circular_limits=pb.CIRCULAR_LIMITS)
-    generator = pb.interval_generator(lower_limits, upper_limits, **kwargs)
-    def fn():
-        return tuple(next(generator))
-    return fn
-
 add_sugar_box = lambda world, **kwargs: add_ycb(world, SUGAR, **kwargs)
 add_spam_box = lambda world, **kwargs: add_ycb(world, SPAM, **kwargs)
 
@@ -70,7 +61,13 @@ if __name__ == "__main__":
     name_spam, pose_spam = add_spam_box(world, pose2d=INIT_POSE_SPAM)
     print("{} pose = {}".format(name_sugar, pose_sugar))
     print("{} pose = {}".format(name_spam, pose_spam))
+
+    print("World now has bodies:")
+    print(world.body_from_name)
     pb.wait_for_user()
+
+    print("pybullet pose for sugar box:")
+    print(pb.get_pose(world.body_from_name[name_sugar]))
 
     # Scoot robot over for better starting position
     init_base_pos = pb.get_joint_positions(world.robot, world.base_joints)
@@ -87,23 +84,31 @@ if __name__ == "__main__":
         time.sleep(0.02)  # let's make it look smooth for fun
         x = goal_pos[0]
 
-    # Try out sample function
+    # Try to move hand to sugar box
     tool_link = pb.link_from_name(world.robot, "panda_hand")
-    sample_fn = get_sample_fn(world.robot, world.arm_joints)
+    print("Starting joint configuration:")
+    ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
+    conf = pb.get_joint_positions(world.robot, ik_joints)
+    print(conf)
     pb.wait_for_user()
-    for i in range(15):
-        print("Iteration: ", i)
-
-        # Use IK to move
-        ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
-        print("IK joints = ", ik_joints)
-        start_pose = pb.get_link_pose(world.robot, tool_link)
-        print("Start pose = ", start_pose)
+    start_pose = pb.get_link_pose(world.robot, tool_link)
+    print("Start pose = ", start_pose)
+    pose_sugar_world = pb.get_pose(world.get_body(name_sugar))
+    goal_pose = pb.Pose(point=pose_sugar_world[0], euler=pb.euler_from_quat(start_pose[1]))
+    print("Goal pose = ", goal_pose)
+    while conf is not None:
         # TODO I think these are in robot body pose, FRD maybe based on motion
-        end_pose = pb.multiply(start_pose, pb.Pose(pb.Point(x=0.05, z=-0.01)))
-        print("End pose = ", end_pose)
-        for pose in pb.interpolate_poses(start_pose, end_pose, pos_step_size=0.01):
+        # end_pose = pb.multiply(start_pose, pb.Pose(pb.Point(x=0.05, z=-0.01)))
+        # print("End pose = ", end_pose)
+        for i, pose in enumerate(pb.interpolate_poses(start_pose, goal_pose, pos_step_size=0.01)):
             conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
+            if i % 10 == 0:
+                print("\tNext pose = \n\t", pose)
+            if near(pose, goal_pose):
+                print("Got to {}.\nClose enough!".format(pose))
+                conf = None
+                pb.wait_for_user()
+                break
             if conf is None:
                 print("Failure!")
                 pb.wait_for_user()
