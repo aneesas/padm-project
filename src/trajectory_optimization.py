@@ -34,54 +34,55 @@ class TrajectoryOptimizer:
         self.urdf_path = urdf_path
 
         self.total_angle_sum = 0.0
-        self.timesteps = 100 #seconds
-        self.duration = 0.5 #seconds
+        self.timesteps = 15
+        self.duration = 0.05 #seconds
         
-        # self.joint_angle_limits = np.array([
-        #                         [min_angle_1, max_angle_1],
-        #                         [min_angle_2, max_angle_2],
-        #                         [min_angle_2, max_angle_2],
-        #                         [min_angle_2, max_angle_2],
-        #                         [min_angle_2, max_angle_2],
-        #                         [min_angle_2, max_angle_2],
-        #                         [min_angle_2, max_angle_2],
-        #                         ])
+        self.joint_angle_limits = np.array([
+                                [-2.8973, 2.8973],
+                                [-1.7628, 1.7628,],
+                                [-2.8973, 2.8973],
+                                [-3.0718, -0.0698],
+                                [-2.8973, 2.8973],
+                                [-0.0175, 3.7525],
+                                [-2.8973, 2.8973],
+                                ])
+        self.joint_velocity_limits = np.array([2.1750, 2.1750, 2.1750, 2.6100, 2.6100, 2.6100, 2.6100])
 
     def optimize_trajectory(self):
-        # Load the URDF file using MultibodyPlant
-        builder = DiagramBuilder()
-        plant, scene_graph = pydrake.multibody.plant.AddMultibodyPlantSceneGraph(builder, time_step=0.0)
-        Parser(plant).AddModelFromFile(self.urdf_path)
-        plant.Finalize()
 
-        # Get joint limits from MultibodyPlant
-        joint_limits = []
-        for joint_index in range(plant.num_joints()):
-            joint = plant.get_joint(joint_index)
-            if joint.is_floating():
-                continue  # Skipping floating joints
-            joint_limits.append([joint.position_lower_limits(), joint.position_upper_limits()])
-
-        # Assuming you have time samples
-        # time_steps = np.linspace(0, 1, self.timesteps)  # Example time samples
-
-        # Initialize MathematicalProgram
         prog = MathematicalProgram()
 
         # Define decision variables for joint angles
-        q = prog.NewContinuousVariables(plant.num_positions(), self.timesteps, "q")
+        q = prog.NewContinuousVariables(7, self.timesteps, "q")
+        qdot = prog.NewContinuousVariables(7, self.timesteps, "qdot")
 
         # Add joint limits constraints
         for i in range(self.timesteps):
-            for j in range(plant.num_positions()):
-                if not plant.get_joint(j).is_floating():
-                    joint_index = plant.get_joint(j).position_start()
-                    lower_limit, upper_limit = joint_limits[joint_index]
-                    prog.AddBoundingBoxConstraint(lower_limit, upper_limit, q[j, i])
+            for j in range(7):  # Assuming 7 joints
+                prog.AddBoundingBoxConstraint(self.joint_angle_limits[j, 0], self.joint_angle_limits[j, 1], q[j, i])
 
-        # Define the objective function: minimize the total sum of joint angles
-        total_joint_angles = sum(sum(q[:, i]) for i in range(self.timesteps))
-        prog.AddCost(total_joint_angles)
+        # Joint velocity limits constraints
+        for i in range(self.timesteps):
+            for j in range(7):
+                prog.AddBoundingBoxConstraint(-self.joint_velocity_limits[j], self.joint_velocity_limits[j], qdot[j, i])
+
+
+        # Add equality constraints to relate joint angles to velocities
+        for i in range(self.timesteps):
+            if i < self.timesteps - 1:
+                prog.AddConstraint(eq(q[:, i + 1], q[:, i] + qdot[:, i] * self.duration))
+
+        distance_to_goal = 0
+        for i in range(self.timesteps): 
+            for j in range(7):  # Assuming 7 joints
+                distance_to_goal += (q[j, i] - self.goal[j])**2
+
+        prog.AddCost(distance_to_goal)
+
+        for j in range(7):  # Assuming 7 joints
+            prog.AddLinearConstraint(q[j, 0] == self.start[j])  # Start configuration constraint
+            prog.AddLinearConstraint(q[j, self.timesteps - 1] == self.goal[j])  # Goal configuration constraint
+
 
         # Solve the optimization problem
         solver = SnoptSolver()
@@ -93,6 +94,7 @@ class TrajectoryOptimizer:
             # Process the optimized joint angles
         else:
             print("Optimization failed.")
+            return None
 
 
 
@@ -170,7 +172,7 @@ class TrajectoryOptimizer:
 # Main function
 if __name__ == "__main__":
     # Assuming initial and final joint configurations are given
-    urdf_path = "/panda_arm.urdf"
+    urdf_path = "padm-project-2023f/models/franka_description/robots/panda_arm.urdf"
     start = np.array([0.01200158428400755, -0.5697816014289856, 5.6801487517077476e-05, -2.8105969429016113, -0.00025768374325707555, 3.0363450050354004, 0.7410701513290405])
     goal = np.array([-0.20768028027714652, 0.21438383591444632, 0.31978980093429454, -1.0415727534705166, -0.12723213908070363, 2.039780699681913, 0.8158902027978119])
 
