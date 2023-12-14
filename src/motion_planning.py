@@ -104,7 +104,7 @@ def trace_path(node: Node) -> list:
 
 
 ### RRT Planner
-def rrt(world: World, start_pose, goal_pose, tolerance, max_iterations=1e10, n_goal_bias=10):
+def rrt(world: World, start_pose, goal_pose, tolerance=0.1, max_iterations=1e10, n_goal_bias=10):
     """
     max_iterations (int): limit planning time with number of iterations
     n_goal_bias (int): sample from goal region every n samples

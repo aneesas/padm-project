@@ -96,32 +96,11 @@ if __name__ == "__main__":
     pb.set_joint_positions(world.robot, world.base_joints, BASE_POSE2D["right"])
     pb.wait_for_user()
 
-    # Try to move hand to sugar box
-    tool_link = pb.link_from_name(world.robot, "panda_hand")
-    print("Starting joint configuration:")
-    ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
-    conf = pb.get_joint_positions(world.robot, ik_joints)
-    print(conf)
-    pb.wait_for_user()
-    start_pose = pb.get_link_pose(world.robot, tool_link)
-    print("Start pose = ", start_pose)
-    goal_pose = pb.Pose(point=HAND_POSE3D["sugar"], euler=pb.euler_from_quat(start_pose[1]))
-    print("Goal pose = ", goal_pose)
-    while conf is not None:
-        for i, pose in enumerate(pb.interpolate_poses(start_pose, goal_pose, pos_step_size=0.01)):
-            conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
-            if i % 10 == 0:
-                print("\tNext pose = \n\t", pose)
-            if near(pose, goal_pose):
-                print("Got to {}.\nClose enough!".format(pose))
-                conf = None
-                pb.wait_for_user()
-                break
-            if conf is None:
-                print("Failure!")
-                pb.wait_for_user()
-                break
-            pb.set_joint_positions(world.robot, ik_joints, conf)
-
     # TODO set up RobotPlanner object that reads in PDDL files and initializes activity + motion planners
 
+    # Move from start to sugar box using RRT
+    tool_link = pb.link_from_name(world.robot, "panda_hand")
+    start_pose = pb.get_link_pose(world.robot, tool_link)
+    rrt_path = rrt(world, start_pose, HAND_POSE3D["sugar"])
+    print("Path received = ")
+    print(rrt_path)
