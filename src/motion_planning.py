@@ -19,8 +19,7 @@ import pybullet_tools.ikfast.ikfast as ik
 
 ### Helper functions
 
-
-### RRT Planner
+WORLD_BOUNDS = ((), (), ())  # x, y, z--taken from sim
 
 def get_sample_fn(body, joints, custom_limits={}, **kwargs):
     """Generate a sampling function for arm configurations"""
@@ -30,35 +29,55 @@ def get_sample_fn(body, joints, custom_limits={}, **kwargs):
         return tuple(next(generator))
     return fn
 
-def sample(world: World, sampling_function):
+
+def sample(world: World, bounds=WORLD_BOUNDS):
     # TODO I want to operate in world frame
     # get_joint_positions returns in world frame
     return
+
 
 def in_obstacle(world: World, pose: tuple):
     # TODO
     return False
 
+
 def distance(node1: Node, node2: Node):
+    """ TODO """
     # Calculate Euclidean distance between two nodes
     pose1 = np.array(node1.pose)
     pose2 = np.array(node2.pose)
     return np.linalg.norm(pose2 - pose1)
 
+
 def nearest_node(V: list, node: Node) -> Node:
+    """ TODO """
     distances = np.array([distance(x, node) for x in V])
     idx = np.argmin(distances)
     return V[idx]
 
+
 def steer_panda(world: World, x_from: Node, x_to: Node, d: float=0.5) -> Node:
+    """ TODO """
     # Figure out how far we can go using inverse kinematics
     # Only steer d * max allowed distance (so we don't get stuck in
     # some fully-extended configuration that's hard to get out of)
     tool_link = pb.link_from_name(world.robot, "panda_hand")
-    ik_joints = ik.get_ik_joints(world.robot, PANDA_INFO, tool_link)
-    # TODO how do I get 
-    new_pose = ()
+    # Let's assume our sample is (position, orientation)
+    position_to = x_to.pose[0]
+    end_pose = pb.multiply(x_from.pose, pb.Pose(point=pb.Point(x=position_to[0],
+                                                               y=position_to[1],
+                                                               z=position_to[2])))
+    interpolated_poses = pb.interpolate_poses(x_from.pose, end_pose, pos_step_size=0.1)
+    for i, p in enumerate(interpolated_poses):
+        conf = next(ik.closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, p, max_time=0.05), None)
+        if conf is None:
+            break
+    
+    # i represents how far we got into interpolated_poses
+    i = int(i * d)
+    new_pose = interpolated_poses[i]
     return Node(new_pose, parent=x_from)
+
 
 def near(pose1: tuple, pose2: tuple, tolerance=0.1) -> bool:
     """
@@ -78,7 +97,9 @@ def near(pose1: tuple, pose2: tuple, tolerance=0.1) -> bool:
     else:
         return False
 
+
 def trace_path(node: Node) -> list:
+    """ TODO """
     path = [node.pose]
     parent = node.parent
     while parent is not None:
@@ -87,6 +108,8 @@ def trace_path(node: Node) -> list:
     path.reverse()
     return path
 
+
+### RRT Planner
 def rrt(world: World, start_pose, goal_pose, tolerance, max_iterations=1e10, n_goal_bias=10):
     """
     max_iterations (int): limit planning time with number of iterations
@@ -109,7 +132,6 @@ def rrt(world: World, start_pose, goal_pose, tolerance, max_iterations=1e10, n_g
         # Sample from free space to get x_rand
         # Try goal-biasing every N samples
         if num_iterations % n_goal_bias == 0:
-            # x_rand = rut.sample(end_region.bounds)
             x_rand = goal_pose
         else:
             x_rand = sample(world, sampling_function=sampling_function)
@@ -144,6 +166,8 @@ def rrt(world: World, start_pose, goal_pose, tolerance, max_iterations=1e10, n_g
         num_iterations += 1
 
     if len(path) == 0:
+        if (num_iterations >= max_iterations):
+            print("[rrt] Exceeded {} iterations in search".format(max_iterations))
         raise Exception("No solution found!")
 
     return path
