@@ -112,52 +112,7 @@ The optimization problem aims to find an optimal joint trajectory that navigates
 
 
 ### Formalization
-
-- Variables:
-  - `q`: Joint angles over time
-  - `qdot`: Joint velocities over time
-- Objective Function:
-  - Minimize the squared distance between joint angles and the goal configuration
-- Constraints:
-  - Joint angle limits for each time step
-  - Joint velocity limits for each time step
-  - Relationship between joint angles and velocities (velocity kinematics)
-  - Indication of start and end configurations
-
-More specifically:
-
-Let:
-- \( q \) be the joint angles over time.
-- \( q_{\dot{}} \) be the joint velocities over time.
-- \( N \) be the total number of joints.
-- \( T \) be the total number of timesteps.
-
-### Variables:
-- \( q \) is a matrix of joint angles: \( q \in \mathbb{R}^{N \times T} \)
-- \( q_{\dot{}} \) is a matrix of joint velocities: \( q_{\dot{}} \in \mathbb{R}^{N \times T} \)
-
-### Objective Function:
-Minimize the squared distance to the goal configuration:
-\[ \text{minimize} \sum_{i=1}^{T} \sum_{j=1}^{N} (q_{ij} - q_{\text{goal}, j})^2 \]
-
-### Constraints:
-1. **Joint Angle Limits**:
-   \[ \text{For } i = 1, \ldots, T \text{ and } j = 1, \ldots, N: \]
-   \[ \text{Lower limit: } \quad q_{\text{min}} \leq q_{ij} \leq q_{\text{max}} \]
-   where \( q_{\text{min}} \) and \( q_{\text{max}} \) are the lower and upper joint angle limits respectively.
-
-2. **Joint Velocity Limits**:
-   \[ \text{For } i = 1, \ldots, T \text{ and } j = 1, \ldots, N: \]
-   \[ \text{Lower limit: } \quad -\dot{q}_{\text{max}} \leq q_{\dot{}} \leq \dot{q}_{\text{max}} \]
-   where \( \dot{q}_{\text{max}} \) is the maximum joint velocity.
-
-3. **Velocity Kinematics**:
-   \[ \text{For } i = 1, \ldots, T-1: \]
-   \[ q_{i+1} = q_{i} + q_{\dot{}} \times \text{duration} \]
-
-4. **Additional Constraints**
-    Start configuration constraint: \( q_{\text{start}} = q_{1} \)
-    Goal configuration constraint: \( q_{\text{goal}} = q_{T} \)
+![Problem](trajopt_problemformalization.png)
 
 
 ## Challenges Faced
@@ -168,6 +123,7 @@ During the implementation, several challenges were encountered, such as:
 
 ## Robot Execution Plan
 ![Robot Execution GIF/Video](link_to_your_gif_or_video)
+
 
 ## Result Comparison
 The resulting optimized trajectory can be compared to the initial sample-based motion plan by evaluating the difference in joint angles and assessing the smoothness and efficiency of motion.
