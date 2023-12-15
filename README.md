@@ -21,7 +21,7 @@ During the design of the domain for activity planning, several assumptions were 
 - The robot arm can only hold one item at a time.
 - We can abstract away the details of certain actions, e.g., how the gripper picks up different items.
 
-## Files and Functions Overview
+## Files and Key Functions
 
 ### Files:
 - `src/activity_planner.py`: Implements the `ActivityPlanner` class that serves as the core of the activity planning functionality.
@@ -96,5 +96,44 @@ Connect to steps in approach above, or just name them in Approach section
 - Provided sampling function gives angles in configuration space (joint angles), not in 3D space so wrote a new sampling function (explain)
 
 # Deliverable 3: Trajectory Optimization
-### Something
-- asdf
+
+This module provides a TrajectoryOptimizer class for optimizing joint trajectories.
+
+## Files and Key Functions
+The primary file is `trajectory_optimizer.py`, containing the `TrajectoryOptimizer` class. Key functions include:
+- `__init__`: Initializes the optimizer with start and goal joint angles.
+- `optimize_trajectory`: Performs joint trajectory optimization based on constraints and goals. Constraints are added to a Mathematical Program (via pydrake). The cost we are trying to minimize is the squared distance from the current joint angle configuration to the goal state joint angles.
+
+## Solver Used
+The code utilizes the `SnoptSolver` from PyDrake for solving the optimization problem.
+
+## Optimization Problem
+The optimization problem aims to find an optimal joint trajectory that navigates from a given start configuration to a specified goal configuration while respecting joint angle limits and velocity constraints.
+
+
+### Formalization
+![Problem](trajopt_problemformalization.png)
+
+
+## Challenges Faced
+During the implementation, several challenges were encountered, such as:
+- Balancing constraints and the objective function for effective convergence.
+- Tuning the duration and the number of timesteps for optimal trajectory generation.
+- Handling convergence failures and adjusting solver parameters.
+
+## Robot Execution Plan
+![Robot Execution GIF/Video](link_to_your_gif_or_video)
+
+
+## Result Comparison
+The resulting optimized trajectory can be compared to the initial sample-based motion plan by evaluating the difference in joint angles and assessing the smoothness and efficiency of motion.
+
+<!-- ### Code Comparison
+```python
+# Include code for comparing the initial sample-based motion plan with the optimized trajectory
+# ...
+
+# Example:
+initial_motion_plan = # initial motion plan data
+optimized_trajectory = output  # Obtained from TrajectoryOptimizer -->
+
