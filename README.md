@@ -6,7 +6,6 @@ MIT 16.413 - Fall 2023
 - Video of trajopt
 - Locations for HAND_POSE3D in run_simulation
 - How to move objects to gripper??? How to move out of gripper???
-- How to open and close drawer?
 
 
 # Deliverable 1: Activity Planning
@@ -75,25 +74,43 @@ Generated Plan:
 
 
 # Deliverable 2: Motion Planning
-### Assumptions
+## Assumptions in Design
 - The robot doesn't need to decide where exactly to place the items once picked up; that is, the location of the countertop and the drawer are known.
-- 
+- We are not accounting for the gripper in motion planning (required angle of approach for grasping, positioning of the individual fingers, etc.)
 
-### Approach
-We use RRT as the backbone of the motion planner.
+## Approach
+We use a straightforward RRT implementation for the motion planner. The algorithm steps are as follows:
 
-- Outline steps of RRT algorithm
+We assume we are given an initial pose (position/orientation pair) and a goal position (3-D, Cartesian), and that we know the bounds of the world and the locations of obstacles within it.
+
+1. Start a tree with the initial pose as the root node.  
+(while a complete path is not found, do:)
+2. Sample a 3-D point from free space.
+3. Check if the sampled point is within an obstacle, and discard it if so.
+4. Find the node in the tree that is closest to the new sampled point.
+5. "Steer" from that closest node to the new sampled point.
+6. Check if this path to the sampled point intersects an obstacle, and discard the new point if so.
+7. Add the new point to the tree with the closest-point node as its parent.
+8. If the new point is "close enough" to the goal position, retrace its path back to the root and return this complete path. Else, repeat from Step 2.
+
+- Explain goal-biasing
 - Explain creation of goal "region" and tolerance used
 - Explain collision-checking
-- Explain arm dynamics (inverse kinematics)
+- Explain arm dynamics (inverse kinematics) and steering (d factor, tuning)
 
-### Key Functions
+If implementing this for a real-world test, we might want to augment this motion planner to use RRT* instead of RRT, to bring our resulting paths closer to optimality without sacrificing the 
+
+## Key Files and Functions
+The relevant code lives in the `motion_planning.py` module.
 Connect to steps in approach above, or just name them in Approach section
 
-### Challenges
-- Difficult to parse what the simulator functions were actually doing vs. what their arguments suggested
-    - Ex: `add_ycb` in the example takes a `counter` argument, but the `COUNTERS` defined in the given `utils.py` file don't have corresponding `Surface` objects, so any `counter` argument given leads to the same pose.
-- Provided sampling function gives angles in configuration space (joint angles), not in 3D space so wrote a new sampling function (explain)
+## Challenges
+The vast majority of our effort for this task was in working with the actual simulation, rather than in implementing our motion planner. The sim is large, complex, and difficult to navigate through function signatures alone. This was, overall, both challenging and frustrating. We elaborate on some particular challenges below that extend beyond this simulation environment.
+
+**Positioning and obstacle avoidance:** The Franka arm has many separate components with many degrees of freedom (arm joints + gripper joints). The positions returned by pybullet for the gripper tool are, to our understanding, centered positions, meaning the actual shape/extent of the gripper should be taken into account when avoiding obstacles. However, since we were not working with manipulating the gripper itself in this project, it was difficult to determine end goal positions for the motion planner that would put the gripper in a believable spot to perform the subsequent action in the activity plan. (E.g., is the gripper close enough to the spam box to actually pick it up, without having the fingers going right through the box?) In an actual implementation, there would be a lot more bookkeeping (and planning!) necessary to maneuver the complete arm to perform the tasks at hand.
+
+**Frames:** We have the ability to compute arm joint angle configurations from (position, orientation) poses using the provided inverse kinematics solution; however, we found ourselves wanting the forward kinematics as well to compute what the pose of the end effector _would_ be for a particular possible angle configuration. Additionally, not all positions returned when querying the simulator are given in the world coordinate frame. Having these different reference frames and coordinates is useful and powerful, but requires thorough bookkeeping and a deeper knowledge of the ins and outs of the simulation and robot dynamics than we had. For this project, we resolved the issue by purely working with the gripper in Cartesian space and letting the provided IK tools compute the corresponding valid joint configurations, but in an actual application, we would want to implement tools to switch freely between reference frames and coordinates.
+
 
 # Deliverable 3: Trajectory Optimization
 ### Something
