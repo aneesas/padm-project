@@ -121,8 +121,10 @@ During the implementation, several challenges were encountered, such as:
 - Tuning the duration and the number of timesteps for optimal trajectory generation.
 - Handling convergence failures and adjusting solver parameters.
 
-## Robot Execution Plan
-![Robot Execution GIF/Video](link_to_your_gif_or_video)
+## Example Plan
+Here is an example of the robot executing the optimized trajectory for the action 'Move from Burner to Drawer'
+
+![Robot Execution Video](movebtod_video.mp4)
 
 
 ## Result Comparison
