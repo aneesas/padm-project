@@ -1,0 +1,11 @@
+movebtod
+open_drawer
+movedtoc
+pick_up_spamatc
+movectod
+put_down_spamatd
+close_drawer
+movedtob
+pick_up_sugaratb
+movebtoc
+put_down_sugaratc
