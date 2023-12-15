@@ -3,14 +3,14 @@ import sys
 import numpy as np
 
 # Local project code
-from src.helpers import Node
+from helpers import Node
 
 # For importing provided simulator code
 sys.path.extend(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()),
                                              *["padm_project_2023f", d])) for d in ["", "pddlstream", "ss-pybullet"])
 
 from src.world import World
-from src.utils import CIRCULAR_LIMITS
+# from src.utils import 
 
 import pybullet_tools.utils as pb
 
@@ -19,46 +19,59 @@ import pybullet_tools.ikfast.ikfast as ik
 
 ### Helper functions
 
+WORLD_BOUNDS = ((-0.5, 1.0), (-1.8, 1.8), (-1.4, 1.4))  # x, y, z--taken from sim
 
-### RRT Planner
 
-def get_sample_fn(body, joints, custom_limits={}, **kwargs):
-    """Generate a sampling function for arm configurations"""
-    lower_limits, upper_limits = pb.get_custom_limits(body, joints, custom_limits, circular_limits=CIRCULAR_LIMITS)
-    generator = pb.interval_generator(lower_limits, upper_limits, **kwargs)
-    def fn():
-        return tuple(next(generator))
-    return fn
+def sample(bounds=WORLD_BOUNDS) -> Node:
+    # Generate random 3D valued Node from given bounds
+    assert len(bounds) == 3
+    min_x, max_x = bounds[0]
+    min_y, max_y = bounds[1]
+    min_z, max_z = bounds[2]
+    rng = np.random.default_rng()
+    x = min_x + rng.random() * (max_x - min_x)
+    y = min_y + rng.random() * (max_y - min_y)
+    z = min_z + rng.random() * (max_z - min_z)
+    return Node(pb.Pose(point=np.array([x, y, z])))
 
-def sample(world: World, sampling_function):
-    # TODO I want to operate in world frame
-    # get_joint_positions returns in world frame
-    return
 
-def in_obstacle(world: World, pose: tuple):
+def in_obstacle(world: World, pose: np.ndarray):
     # TODO
     return False
 
+
 def distance(node1: Node, node2: Node):
+    """ Assumes nodes have numpy arrays as poses """
     # Calculate Euclidean distance between two nodes
-    pose1 = np.array(node1.pose)
-    pose2 = np.array(node2.pose)
-    return np.linalg.norm(pose2 - pose1)
+    return np.linalg.norm(node2.pose[0] - node1.pose[0])
+
 
 def nearest_node(V: list, node: Node) -> Node:
+    """ TODO """
     distances = np.array([distance(x, node) for x in V])
     idx = np.argmin(distances)
     return V[idx]
 
+
 def steer_panda(world: World, x_from: Node, x_to: Node, d: float=0.5) -> Node:
+    """ TODO """
     # Figure out how far we can go using inverse kinematics
     # Only steer d * max allowed distance (so we don't get stuck in
     # some fully-extended configuration that's hard to get out of)
     tool_link = pb.link_from_name(world.robot, "panda_hand")
-    ik_joints = ik.get_ik_joints(world.robot, PANDA_INFO, tool_link)
-    # TODO how do I get 
-    new_pose = ()
+    # Let's assume our samples are (position, orientation)
+    end_pose = pb.Pose(point=x_to.pose[0], euler=pb.euler_from_quat(x_from.pose[1]))
+    interpolated_poses = pb.interpolate_poses(x_from.pose, end_pose, pos_step_size=0.1)
+    for i, p in enumerate(interpolated_poses):
+        conf = next(ik.closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, p, max_time=0.05), None)
+        if conf is None:
+            break
+    
+    # i represents how far we got into interpolated_poses
+    i = int(i * d)
+    new_pose = interpolated_poses[i]
     return Node(new_pose, parent=x_from)
+
 
 def near(pose1: tuple, pose2: tuple, tolerance=0.1) -> bool:
     """
@@ -78,7 +91,9 @@ def near(pose1: tuple, pose2: tuple, tolerance=0.1) -> bool:
     else:
         return False
 
+
 def trace_path(node: Node) -> list:
+    """ TODO """
     path = [node.pose]
     parent = node.parent
     while parent is not None:
@@ -87,7 +102,9 @@ def trace_path(node: Node) -> list:
     path.reverse()
     return path
 
-def rrt(world: World, start_pose, goal_pose, tolerance, max_iterations=1e10, n_goal_bias=10):
+
+### RRT Planner
+def rrt(world: World, start_pose, goal_pose, tolerance=0.1, max_iterations=1e10, n_goal_bias=10):
     """
     max_iterations (int): limit planning time with number of iterations
     n_goal_bias (int): sample from goal region every n samples
@@ -101,18 +118,14 @@ def rrt(world: World, start_pose, goal_pose, tolerance, max_iterations=1e10, n_g
     # Limit planning time with # of iterations
     num_iterations = 0
 
-    # Create sampling function
-    sampling_function = get_sample_fn(world.robot, world.arm_joints)
-
     path = []
     while num_iterations < max_iterations:
         # Sample from free space to get x_rand
         # Try goal-biasing every N samples
         if num_iterations % n_goal_bias == 0:
-            # x_rand = rut.sample(end_region.bounds)
             x_rand = goal_pose
         else:
-            x_rand = sample(world, sampling_function=sampling_function)
+            x_rand = sample()
 
         # If x_rand is in an obstacle, ignore
         # TODO
@@ -144,6 +157,8 @@ def rrt(world: World, start_pose, goal_pose, tolerance, max_iterations=1e10, n_g
         num_iterations += 1
 
     if len(path) == 0:
+        if (num_iterations >= max_iterations):
+            print("[rrt] Exceeded {} iterations in search".format(max_iterations))
         raise Exception("No solution found!")
 
     return path
