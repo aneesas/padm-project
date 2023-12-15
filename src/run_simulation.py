@@ -16,7 +16,7 @@ import pybullet_tools.utils as pb
 # These are from padm_project_2023f
 from src.world import World
 from src.utils import COUNTERS, compute_surface_aabb, name_from_type, \
-    SUGAR, SPAM, DRAWERS, DRAWER_JOINTS
+    SUGAR, SPAM, DRAWERS, DRAWER_JOINTS, ALL_SURFACES
 
 # Constants
 INIT_POSE_SUGAR = (0.05, 0.65, np.pi / 4)  # x, y, yaw in world
@@ -97,7 +97,10 @@ if __name__ == "__main__":
     world = World(use_gui=False)
 
     # Look for obstacles
-    print([pb.get_joint_name(world.kitchen, joint) for joint in world.kitchen_joints])
+    for name in ALL_SURFACES:
+        surface_aabb = compute_surface_aabb(world, name)
+        lower, upper = surface_aabb
+        print("Surface: {}; lower = {}, upper = {}".format(name, lower, upper))
 
     # Set up simulation world as expected
     # NOTE: Leaving `counter` argument from example out because it has no effect.

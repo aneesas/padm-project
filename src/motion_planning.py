@@ -10,6 +10,7 @@ sys.path.extend(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()),
                                              *["padm_project_2023f", d])) for d in ["", "pddlstream", "ss-pybullet"])
 
 from src.world import World
+from src.utils import ALL_SURFACES, compute_surface_aabb
 
 import pybullet_tools.utils as pb
 
@@ -36,8 +37,11 @@ def sample(bounds=WORLD_BOUNDS) -> Node:
 
 def in_obstacle(world: World, node: Node) -> bool:
     """ Checks if the position of the given node is within any obstacles in world """
-    pos_3d = node.pose[0]
-    
+    point_3d = node.pose[0]
+    for name in ALL_SURFACES:
+        surface_aabb = compute_surface_aabb(world, name)
+        if pb.aabb_contains_point(point_3d, surface_aabb):
+            return True
     return False
 
 
@@ -65,19 +69,21 @@ def steer_panda(world: World, x_from: Node, x_to: Node, d: float=0.5) -> Node:
     tool_link = pb.link_from_name(world.robot, "panda_hand")
     # Let's assume our samples are (position, orientation)
     end_pose = pb.Pose(point=x_to.pose[0], euler=pb.euler_from_quat(x_from.pose[1]))
-    interpolated_poses = pb.interpolate_poses(x_from.pose, end_pose, pos_step_size=0.1)
+    interpolated_poses = pb.interpolate_poses(x_from.pose, end_pose, pos_step_size=0.04)
     valid_poses = []
     for i, p in enumerate(interpolated_poses):
         conf = next(ik.closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, p, max_time=0.05), None)
         if conf is None:
             break
-        # TODO put collision detection here?
         else:
             valid_poses.append(p)
     
     # i represents how far we got into interpolated_poses
     i = int(i * d)
-    # TODO or here?
+    # Collision detection on path
+    for pose in valid_poses[:i+1]:
+        if in_obstacle(world, Node(pose)):
+            return None
     new_pose = valid_poses[i]
     return Node(new_pose, parent=x_from)
 

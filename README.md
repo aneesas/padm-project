@@ -111,6 +111,10 @@ The vast majority of our effort for this task was in working with the actual sim
 
 **Frames:** We have the ability to compute arm joint angle configurations from (position, orientation) poses using the provided inverse kinematics solution; however, we found ourselves wanting the forward kinematics as well to compute what the pose of the end effector _would_ be for a particular possible angle configuration. Additionally, not all positions returned when querying the simulator are given in the world coordinate frame. Having these different reference frames and coordinates is useful and powerful, but requires thorough bookkeeping and a deeper knowledge of the ins and outs of the simulation and robot dynamics than we had. For this project, we resolved the issue by purely working with the gripper in Cartesian space and letting the provided IK tools compute the corresponding valid joint configurations, but in an actual application, we would want to implement tools to switch freely between reference frames and coordinates.
 
+**Computation and robustness:**
+- speed of RRT
+- randomness means convergence isn't consistent in timing
+- current implementation plans before each action--possible to do it all offline before execution, but then that doesn't work as well in the real world where you have to adapt/react in presence of uncertainty
 
 # Deliverable 3: Trajectory Optimization
 ### Something
