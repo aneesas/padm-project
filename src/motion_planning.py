@@ -19,7 +19,7 @@ import pybullet_tools.ikfast.ikfast as ik
 
 ### Helper functions
 
-WORLD_BOUNDS = ((-2.0, 2.0), (-2.0, 2.0), (-3.0, 3.0))  # x, y, z--approximated from sim
+WORLD_BOUNDS = ((-2.0, 2.0), (-2.0, 2.0), (-2.0, 2.0))  # x, y, z--approximated from sim
 ALL_KITCHEN_LINKS = ['extractor_hood', 'range', 'front_left_stove', 'front_right_stove', 
                      'back_left_stove', 'back_right_stove', 'control_panel', 'back_left_knob', 
                      'front_left_knob', 'back_right_knob', 'front_right_knob', 'baker_anchor_link', 
@@ -100,6 +100,10 @@ def steer_panda(world: World, x_from: Node, x_to: Node, obstacles: list, d: floa
             break
         else:
             valid_poses.append(p)
+    
+    if len(valid_poses) == 0:
+        print("[steer_panda] WARNING: Could not steer at all!")
+        return None
     
     # i represents how far we got into interpolated_poses
     i = int(i * d)

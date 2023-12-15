@@ -31,13 +31,13 @@ COUNTER_NAME = "indigo_tmp"
 # TODO I think we only need the right side
 BASE_POSE2D = {
     "left": np.array([0.85, -0.15, np.pi]),
-    "right": np.array([0.85, 0.6, np.pi])
+    "right": np.array([0.85, 0.7, np.pi])
 }
 
 HAND_POSE3D = {
-    "drawer": np.array([0.35, 1.15, -0.57]),
-    "counter": np.array([0.7, 1.0, -0.54]),
-    "burner": np.array([0.7, 0.0, -0.54])
+    # "drawer": np.array([0.35, 1.15, -0.57]),
+    "counter": np.array([0.25, 1.2, -0.54]),
+    "burner": np.array([0.15, 0.75, -0.54])
 }
 
 ACTIVITY_GOAL_LOC = {
@@ -109,18 +109,26 @@ if __name__ == "__main__":
     _, pose_sugar = add_sugar_box(world, pose2d=INIT_POSE_SUGAR)
     _, pose_spam = add_spam_box(world, pose2d=INIT_POSE_SPAM)
 
-    # Save object goal locations for later
+    # Populate goal locations
     HAND_POSE3D["sugar"] = pose_sugar[0] + np.array([0., 0., 0.2])
     HAND_POSE3D["spam"] = pose_spam[0] + np.array([0., 0., 0.2])
+    # Drawer location should be at handle to start
+    HAND_POSE3D["drawer"] = pb.get_com_pose(world.kitchen,
+                                            pb.link_from_name(world.kitchen, "indigo_drawer_handle_top"))[0]
+    print(HAND_POSE3D)
+    HAND_POSE3D["drawer"] = np.array([0.35, 1.15, -0.57])
 
     # Move robot to starting position to get in gripping range
     pb.set_joint_positions(world.robot, world.base_joints, BASE_POSE2D["right"])
     pb.wait_for_user()
 
     # TODO delete
-    print("drawer handle location = ")
-    handle_link = pb.link_from_name(world.kitchen, "indigo_drawer_handle_top")
-    print(pb.get_com_pose(world.kitchen, handle_link))
+    locs = ["range", "indigo_countertop", "indigo_drawer_top", "indigo_drawer_handle_top"]
+    for loc in locs:
+        print("{} location = ".format(loc))
+        link = pb.link_from_name(world.kitchen, loc)
+        print(pb.get_com_pose(world.kitchen, link))
+        print("\tAABB = ", pb.get_aabb(world.kitchen, link))
 
     # Read in activity plan from file
     with open(ACTIVITY_PLAN_FILE, "r") as fp:
