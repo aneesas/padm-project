@@ -93,8 +93,11 @@ if __name__ == "__main__":
     print("Random seed:", pb.get_random_seed())
     print("Numpy seed:", pb.get_numpy_seed())
 
-    world = World(use_gui=True)
-    # world = World(use_gui=False)
+    # world = World(use_gui=True)
+    world = World(use_gui=False)
+
+    # Look for obstacles
+    print([pb.get_joint_name(world.kitchen, joint) for joint in world.kitchen_joints])
 
     # Set up simulation world as expected
     # NOTE: Leaving `counter` argument from example out because it has no effect.

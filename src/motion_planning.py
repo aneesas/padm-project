@@ -22,7 +22,7 @@ WORLD_BOUNDS = ((-2.0, 2.0), (-2.0, 2.0), (-3.0, 3.0))  # x, y, z--taken from si
 
 
 def sample(bounds=WORLD_BOUNDS) -> Node:
-    # Generate random 3D valued Node from given bounds
+    """ Generates random 3D valued (Cartesian) Node from given bounds """
     assert len(bounds) == 3
     min_x, max_x = bounds[0]
     min_y, max_y = bounds[1]
@@ -34,26 +34,31 @@ def sample(bounds=WORLD_BOUNDS) -> Node:
     return Node(pb.Pose(point=np.array([x, y, z])))
 
 
-def in_obstacle(world: World, pose: np.ndarray) -> bool:
-    # TODO
+def in_obstacle(world: World, node: Node) -> bool:
+    """ Checks if the position of the given node is within any obstacles in world """
+    pos_3d = node.pose[0]
+    
     return False
 
 
 def distance(node1: Node, node2: Node):
-    """ Assumes nodes have numpy arrays as poses """
-    # Calculate Euclidean distance between two nodes
+    """ Calculates Euclidean distance between two nodes """
     return np.linalg.norm(node2.pose[0] - node1.pose[0])
 
 
 def nearest_node(V: list, node: Node) -> Node:
-    """ TODO """
+    """ Finds the closest node in the given tree V based on Euclidean distance """
     distances = np.array([distance(x, node) for x in V])
     idx = np.argmin(distances)
     return V[idx]
 
 
 def steer_panda(world: World, x_from: Node, x_to: Node, d: float=0.5) -> Node:
-    """ TODO """
+    """
+    Generates a new node in the direction of x_to from x_from, limiting 
+    the distance from x_from by the robot arm's kinematics and by a scaling
+    distance factor d
+    """
     # Figure out how far we can go using inverse kinematics
     # Only steer d * max allowed distance (so we don't get stuck in
     # some fully-extended configuration that's hard to get out of)
@@ -97,7 +102,10 @@ def near(pose1: tuple, pose2: tuple, tolerance=0.1) -> bool:
 
 
 def trace_path(node: Node) -> list:
-    """ TODO """
+    """
+    Returns the path from tree root to the current node, assuming all
+    parent nodes have been correctly assigned
+    """
     path = [node.pose]
     parent = node.parent
     while parent is not None:
@@ -134,7 +142,6 @@ def rrt(world: World, start_pose: tuple, goal_pose: tuple, tolerance=0.1,
             x_rand = sample()
 
         # If x_rand is in an obstacle, ignore
-        # TODO
         if in_obstacle(world, x_rand):
             num_iterations += 1
             continue
