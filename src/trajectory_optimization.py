@@ -19,8 +19,8 @@ class TrajectoryOptimizer:
         self.goal = goal
 
         self.total_angle_sum = 0.0
-        self.timesteps = 15
-        self.duration = 0.05  # seconds
+        self.timesteps = 90
+        self.duration = 0.01  # seconds
 
         self.num_joints = 7
         self.joint_angle_limits = np.array([
@@ -89,12 +89,12 @@ class TrajectoryOptimizer:
 if __name__ == "__main__":
 
     # start and goal states (joint angles)
-    start = np.array([0.01200158428400755, -0.5697816014289856, 5.6801487517077476e-05, -2.8105969429016113,
+    start = np.array([0.01200158428400755, -0.5697816014289856, 5.6801487517077476e-05, -2.8105969429016113, 
                       -0.00025768374325707555, 3.0363450050354004, 0.7410701513290405])
-    goal = np.array([-0.20768028027714652, 0.21438383591444632, 0.31978980093429454, -1.0415727534705166,
-                     -0.12723213908070363, 2.039780699681913, 0.8158902027978119])
+    goal = np.array([1.5618281442820967, -1.631057728860946, -1.9059472736784384, -1.350822975527552, 
+                      -1.1892971579189622, 2.6650320482010894, 0.2461673574163168])
 
     # optimize!
     trajopt = TrajectoryOptimizer(start, goal)
     output = trajopt.optimize_trajectory()
-    print(output)
+    print(np.array2string(output, separator=","))
