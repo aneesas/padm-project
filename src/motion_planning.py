@@ -19,7 +19,29 @@ import pybullet_tools.ikfast.ikfast as ik
 
 ### Helper functions
 
-WORLD_BOUNDS = ((-2.0, 2.0), (-2.0, 2.0), (-3.0, 3.0))  # x, y, z--taken from sim
+WORLD_BOUNDS = ((-2.0, 2.0), (-2.0, 2.0), (-3.0, 3.0))  # x, y, z--approximated from sim
+ALL_KITCHEN_LINKS = ['extractor_hood', 'range', 'front_left_stove', 'front_right_stove', 
+                     'back_left_stove', 'back_right_stove', 'control_panel', 'back_left_knob', 
+                     'front_left_knob', 'back_right_knob', 'front_right_knob', 'baker_anchor_link', 
+                     'baker_link_tmp', 'baker_link', 'baker_handle',
+                     'chewie_door_right_anchor_link', 'chewie_door_right_link_tmp', 
+                     'chewie_door_right_link', 'chewie_door_right_handle', 
+                     'chewie_door_left_anchor_link', 'chewie_door_left_link_tmp', 
+                     'chewie_door_left_link', 'chewie_door_left_handle', 'dagger', 
+                     'dagger_door_left_anchor_link', 'dagger_door_left_link_tmp', 
+                     'dagger_door_left_link', 'dagger_door_left_handle', 
+                     'dagger_door_right_anchor_link', 'dagger_door_right_link_tmp', 
+                     'dagger_door_right_link', 'dagger_door_right_handle', 'hitman_tmp', 
+                     'hitman_countertop', 'hitman', 'hitman_drawer_top', 'hitman_drawer_top_front',
+                     'hitman_drawer_handle_top', 'hitman_drawer_bottom', 
+                     'hitman_drawer_bottom_front', 'hitman_drawer_handle_bottom', 'indigo_tmp', 
+                     'indigo_countertop', 'indigo', 'indigo_door_right_anchor_link', 
+                     'indigo_door_right_joint_anchor_link', 'indigo_door_right_link', 
+                     'indigo_door_right', 'indigo_door_right_nob_link',
+                     'indigo_door_left_anchor_link', 'indigo_door_left_joint_anchor_link', 
+                     'indigo_door_left_link', 'indigo_door_left', 'indigo_door_left_nob_link', 
+                     'indigo_drawer_top', 'indigo_drawer_handle_top', 'indigo_drawer_bottom', 
+                     'indigo_drawer_handle_bottom']
 
 
 def sample(bounds=WORLD_BOUNDS) -> Node:
@@ -35,12 +57,13 @@ def sample(bounds=WORLD_BOUNDS) -> Node:
     return Node(pb.Pose(point=np.array([x, y, z])))
 
 
-def in_obstacle(world: World, node: Node) -> bool:
+def in_obstacle(world: World, node: Node, obstacles=None) -> bool:
     """ Checks if the position of the given node is within any obstacles in world """
     point_3d = node.pose[0]
-    for name in ALL_SURFACES:
-        surface_aabb = compute_surface_aabb(world, name)
-        if pb.aabb_contains_point(point_3d, surface_aabb):
+    if obstacles is None:
+        obstacles = [compute_surface_aabb(world, name) for name in ALL_SURFACES]
+    for o in obstacles:
+        if pb.aabb_contains_point(point_3d, o):
             return True
     return False
 
@@ -57,7 +80,7 @@ def nearest_node(V: list, node: Node) -> Node:
     return V[idx]
 
 
-def steer_panda(world: World, x_from: Node, x_to: Node, d: float=0.5) -> Node:
+def steer_panda(world: World, x_from: Node, x_to: Node, obstacles: list, d: float=0.5) -> Node:
     """
     Generates a new node in the direction of x_to from x_from, limiting 
     the distance from x_from by the robot arm's kinematics and by a scaling
@@ -81,8 +104,10 @@ def steer_panda(world: World, x_from: Node, x_to: Node, d: float=0.5) -> Node:
     # i represents how far we got into interpolated_poses
     i = int(i * d)
     # Collision detection on path
+    print("[steer_panda] got {} valid poses".format(len(valid_poses)))
     for pose in valid_poses[:i+1]:
-        if in_obstacle(world, Node(pose)):
+        if in_obstacle(world, Node(pose), obstacles=obstacles):
+            print("No good!")
             return None
     new_pose = valid_poses[i]
     return Node(new_pose, parent=x_from)
@@ -138,6 +163,10 @@ def rrt(world: World, start_pose: tuple, goal_pose: tuple, tolerance=0.1,
     # Limit planning time with # of iterations
     num_iterations = 0
 
+    # Get obstacles from world
+    obstacles = [pb.get_aabb(world.kitchen, pb.link_from_name(world.kitchen, name)) 
+                 for name in ALL_KITCHEN_LINKS]
+
     path = []
     while num_iterations < max_iterations:
         # Sample from free space to get x_rand
@@ -148,7 +177,7 @@ def rrt(world: World, start_pose: tuple, goal_pose: tuple, tolerance=0.1,
             x_rand = sample()
 
         # If x_rand is in an obstacle, ignore
-        if in_obstacle(world, x_rand):
+        if in_obstacle(world, x_rand, obstacles=obstacles):
             num_iterations += 1
             continue
 
@@ -156,7 +185,7 @@ def rrt(world: World, start_pose: tuple, goal_pose: tuple, tolerance=0.1,
         x_nearest = nearest_node(V, x_rand)
 
         # Steer from x_nearest to x_rand to get x_new
-        x_new = steer_panda(world, x_nearest, x_rand, d=d_steer)
+        x_new = steer_panda(world, x_nearest, x_rand, obstacles, d=d_steer)
         if x_new is None:
             # This means there was a collision in the path
             num_iterations += 1
