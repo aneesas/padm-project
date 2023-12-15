@@ -124,7 +124,7 @@ During the implementation, several challenges were encountered, such as:
 ## Example Plan
 Here is an example of the robot executing the optimized trajectory for the action 'Move from Burner to Drawer'
 
-![Robot Execution Video](movebtod_video.mp4)
+![Robot Execution Video](movebtod_video.gif)
 
 
 ## Result Comparison
