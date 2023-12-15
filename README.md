@@ -65,13 +65,30 @@ Strategies employed to address these challenges involved:
 - Extensive testing and validation of the PDDL parsing functionalities.
 - Experimenting with different planning algorithms and heuristics to optimize the solution process. The structure of the code allows for ease in switching between different planners if we were to implement other kinds as well.
 
-## Example Result
-Initial State:  {('clear_gripper',), ('countertop_has_spambox',), ('at_drawer',), ('burner_has_sugarbox',), ('clear_drawer',)}
+## Example Plan for Specified Task
+**Initial State:**
+- 'clear_gripper'
+- 'countertop_has_spambox'
+- 'at_drawer'
+- 'burner_has_sugarbox'
+- 'clear_drawer'
 
-Goal State:  {('countertop_has_sugarbox',), ('drawer_has_spambox',)} and not {('open_drawer',)}
+**Goal State:**
+- 'countertop_has_sugarbox'
+- 'drawer_has_spambox'
+- not 'open_drawer'
 
-Generated Plan: 
-['open_drawer', 'movedtoc', 'pick_up_spamatc', 'movectod', 'put_down_spamatd', 'close_drawer', 'movedtob', 'pick_up_sugaratb', 'movebtoc', 'put_down_sugaratc']  
+**Generated Plan:**
+1. open_drawer (Open the drawer)
+2. movedtoc (Move from drawer to countertop)
+3. pick_up_spamatc (Pick up spam box from countertop)
+4. movectod (Move from countertop to drawer)
+5. put_down_spamatd (Put down spam box in the drawer)
+6. close_drawer (Close the drawer)
+7. movedtob (Move from drawer to burner)
+8. pick_up_sugaratb (Pick up sugar box from burner)
+9. movebtoc (Move from burner to countertop)
+10. put_down_sugaratc (Put down sugar box at countertop)
 
 
 # Deliverable 2: Motion Planning
