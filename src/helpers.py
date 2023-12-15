@@ -79,23 +79,19 @@ def move_arm(world, link, path: list):
 
     return
 
-def put_down_sugar(world, surface_name="indigo_tmp"):
+def put_down_sugar(world, point_3d, surface_name="indigo_tmp"):
     """Put sugar down on counter and return new sugar pose"""
-    counter_pos, _ = pb.get_link_pose(world.kitchen,
-                                       pb.link_from_name(world.kitchen, surface_name))
-    x, y, _ = counter_pos
+    x, y, _ = point_3d
     pose = pose2d_on_surface(world, SUGAR, surface_name, pose2d=(x, y, np.pi / 4))
     return pose
 
-def put_down_spam(world):
+def put_down_spam(world, drawer_name="indigo_drawer_top"):
     """Put spam down inside drawer and return new spam pose"""
-    range_link = pb.link_from_name(world.kitchen, "range")
-    print("range link = ", range_link)
-    print("range pose = ", pb.get_link_pose(world.kitchen, range_link))
-    print("range pose com = ", pb.get_com_pose(world.kitchen, range_link))
-    print("front right stove pose = ", pb.get_link_pose(world.kitchen, 
-                                                        pb.link_from_name(world.kitchen, "front_right_stove")))
-    print("front right stove com  =  ", pb.get_com_pose(world.kitchen, 
-                                                        pb.link_from_name(world.kitchen, "front_right_stove")))
-    print("countertop state = ")
-    print(pb.get_link_state(world.kitchen, pb.link_from_name(world.kitchen, "indigo_tmp")))
+    link = pb.link_from_name(world.kitchen, drawer_name)
+    aabb = pb.get_aabb(world.kitchen, link)
+    x, y, _ = pb.get_aabb_center(aabb)
+    z = aabb[0][2]  # lower limits, z
+    body = world.get_body(SPAM)
+    pose = pb.Pose(pb.Point(x, y, z), pb.Euler(yaw=np.pi / 4))
+    pb.set_pose(body, pose)
+    return pose
