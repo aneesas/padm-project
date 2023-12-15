@@ -18,7 +18,7 @@ import pybullet_tools.ikfast.ikfast as ik
 
 ### Helper functions
 
-WORLD_BOUNDS = ((-0.5, 1.0), (-1.8, 1.8), (-1.4, 1.4))  # x, y, z--taken from sim
+WORLD_BOUNDS = ((-2.0, 2.0), (-2.0, 2.0), (-3.0, 3.0))  # x, y, z--taken from sim
 
 
 def sample(bounds=WORLD_BOUNDS) -> Node:
@@ -66,11 +66,13 @@ def steer_panda(world: World, x_from: Node, x_to: Node, d: float=0.5) -> Node:
         conf = next(ik.closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, p, max_time=0.05), None)
         if conf is None:
             break
+        # TODO put collision detection here?
         else:
             valid_poses.append(p)
     
     # i represents how far we got into interpolated_poses
     i = int(i * d)
+    # TODO or here?
     new_pose = valid_poses[i]
     return Node(new_pose, parent=x_from)
 
@@ -106,10 +108,12 @@ def trace_path(node: Node) -> list:
 
 
 ### RRT Planner
-def rrt(world: World, start_pose: tuple, goal_pose: tuple, tolerance=0.1, max_iterations=1e10, n_goal_bias=10):
+def rrt(world: World, start_pose: tuple, goal_pose: tuple, tolerance=0.1, 
+        max_iterations=1e10, n_goal_bias=10, d_steer=0.5):
     """
     max_iterations (int): limit planning time with number of iterations
     n_goal_bias (int): sample from goal region every n samples
+    d_steer (float): distance factor for use in steering function
 
     Returns list of poses for collision-free path from start to goal
     """
@@ -139,14 +143,12 @@ def rrt(world: World, start_pose: tuple, goal_pose: tuple, tolerance=0.1, max_it
         x_nearest = nearest_node(V, x_rand)
 
         # Steer from x_nearest to x_rand to get x_new
-        x_new = steer_panda(world, x_nearest, x_rand, d=0.5)
-    
-        # If the path from x_nearest to x_new encounters a collision, ignore
-        # TODO path collision-checking
-        # if rut.collision(x_nearest, x_new, radius, environment):
-        #     num_iterations += 1
-        #     continue
-        
+        x_new = steer_panda(world, x_nearest, x_rand, d=d_steer)
+        if x_new is None:
+            # This means there was a collision in the path
+            num_iterations += 1
+            continue
+
         # Add x_new to tree
         V.append(x_new)
 

@@ -1,5 +1,6 @@
 import os
 import sys
+import numpy as np
 
 # Provided simulator code
 sys.path.extend(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()),
@@ -8,6 +9,9 @@ sys.path.extend(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()),
 import pybullet_tools.utils as pb
 from pybullet_tools.ikfast.franka_panda.ik import PANDA_INFO
 from pybullet_tools.ikfast.ikfast import get_ik_joints, closest_inverse_kinematics
+
+# These are from padm_project_2023f
+from src.utils import COUNTERS, compute_surface_aabb, name_from_type
 
 
 ### Motion planning helpers
@@ -30,6 +34,30 @@ class Node():
 
 
 ### Simulation helpers
+# Helper functions from minimal_example.py
+def add_ycb(world, ycb_type, counter=0, **kwargs) -> (str, tuple):
+    name = name_from_type(ycb_type)
+    world.add_body(name, color=np.ones(4))
+    pose = pose2d_on_surface(world, name, COUNTERS[counter], **kwargs)
+    return name, pose
+
+
+def pose2d_on_surface(world, entity_name, surface_name, pose2d=(0., 0., 0.)):
+    """
+    TODO docstring
+    pose2d: (x, y, yaw)
+    """
+    x, y, yaw = pose2d
+    body = world.get_body(entity_name)
+    print("[pose2d_on_surface] body = ", body)
+    surface_aabb = compute_surface_aabb(world, surface_name)
+    z = pb.stable_z_on_aabb(body, surface_aabb)
+    pose = pb.Pose(pb.Point(x, y, z), pb.Euler(yaw=yaw))
+    pb.set_pose(body, pose)
+    print("[pose2d_on_surface] entity {} pose = {}".format(entity_name, pose))
+    return pose
+
+
 def move_arm(world, link, path: list):
     if len(path) == 0:
         print("[move_arm] WARNING: Got empty path!")
@@ -51,3 +79,10 @@ def move_arm(world, link, path: list):
         prev_pose = pose
 
     return
+
+def put_down_sugar():
+    """Put sugar down on counter and return new sugar pose"""
+    return
+
+def put_down_spam():
+    """Put spam down inside drawer and return new spam pose"""
