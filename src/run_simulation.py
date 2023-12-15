@@ -4,105 +4,174 @@ import numpy as np
 import time
 
 # Local project code
-from motion_planning import rrt, near
+from motion_planning import rrt
+from helpers import add_ycb, move_arm, put_down_sugar, put_down_spam
 
-# Provided simulator code, which is not set up to be installed as packages
+# Provided simulator code
 sys.path.extend(os.path.abspath(os.path.join(os.path.dirname(os.getcwd()),
                                              *["padm_project_2023f", d])) for d in ["", "pddlstream", "ss-pybullet"])
 
 import pybullet_tools.utils as pb
-from pybullet_tools.ikfast.franka_panda.ik import PANDA_INFO, FRANKA_URDF
-from pybullet_tools.ikfast.ikfast import get_ik_joints, closest_inverse_kinematics
+from pybullet_tools.ikfast.franka_panda.ik import PANDA_INFO
+from pybullet_tools.ikfast.ikfast import get_ik_joints
+
 
 # These are from padm_project_2023f
 from src.world import World
 from src.utils import COUNTERS, compute_surface_aabb, name_from_type, \
-    translate_linearly, SUGAR, SPAM
+    SUGAR, SPAM, DRAWERS, DRAWER_JOINTS, ALL_SURFACES, surface_from_name
 
 # Constants
-UNIT_POSE2D = (0., 0., 0.)  # x, y, yaw
 INIT_POSE_SUGAR = (0.05, 0.65, np.pi / 4)  # x, y, yaw in world
 INIT_POSE_SPAM = (0.2, 1.1, np.pi / 4)  # x, y, yaw in world
+ACTIVITY_PLAN_FILE = "../data/plan.txt"
+DRAWER_JOINT_NAME = "indigo_drawer_top_joint"
+COUNTER_NAME = "indigo_tmp"
 
 # TODO I think we only need the right side
 BASE_POSE2D = {
     "left": np.array([0.85, -0.15, np.pi]),
-    "right": np.array([0.85, 0.6, np.pi])
+    "right": np.array([0.85, 0.7, np.pi])
 }
 
 HAND_POSE3D = {
-    "drawer_closed": np.array([]),
-    "drawer_open": np.array([]),
-    "drawer_above": np.array([]),
-    "drawer_inside": np.array([]),
-    "counter": np.array([]),
-    "burner": np.array([])
+    # "drawer": np.array([0.35, 1.15, -0.57]),
+    "counter": np.array([0.25, 1.2, -0.54]),
+    "burner": np.array([0.15, 0.75, -0.54])
 }
 
 ACTIVITY_GOAL_LOC = {
-    "open_drawer": "drawer_open",
-    "close_drawer": "drawer_closed",
+    "open_drawer": "drawer",
+    "close_drawer": "drawer",
     "pick_up_spamatc": "spam",
-    "put_down_spamatd": "drawer_inside",
+    "put_down_spamatd": "drawer",
     "pick_up_sugaratb": "sugar",
     "put_down_sugaratc": "counter",
     "movedtoc": "counter",
-    "movectod": "drawer_above",
+    "movectod": "drawer",
     "movedtob": "burner",
     "movebtoc": "counter",
+    "movebtod": "drawer",
 }
-
-# Helper functions from minimal_example.py
-def add_ycb(world, ycb_type, counter=0, **kwargs) -> (str, tuple):
-    name = name_from_type(ycb_type)
-    world.add_body(name, color=np.ones(4))
-    pose = pose2d_on_surface(world, name, COUNTERS[counter], **kwargs)
-    return name, pose
-
-def pose2d_on_surface(world, entity_name, surface_name, pose2d=UNIT_POSE2D):
-    x, y, yaw = pose2d
-    body = world.get_body(entity_name)
-    print("[pose2d_on_surface] body = ", body)
-    surface_aabb = compute_surface_aabb(world, surface_name)
-    z = pb.stable_z_on_aabb(body, surface_aabb)
-    pose = pb.Pose(pb.Point(x, y, z), pb.Euler(yaw=yaw))
-    pb.set_pose(body, pose)
-    print("[pose2d_on_surface] entity {} pose = {}".format(entity_name, pose))
-    return pose
 
 add_sugar_box = lambda world, **kwargs: add_ycb(world, SUGAR, **kwargs)
 add_spam_box = lambda world, **kwargs: add_ycb(world, SPAM, **kwargs)
+
+def secondary_effects(world, act):
+    """Executes actions after motion based on which action name is provided."""
+    if "move" in act:
+        # Valid action, but nothing else to do
+        return
+
+    if act == "open_drawer":
+        world.open_door(pb.joint_from_name(world.kitchen, DRAWER_JOINT_NAME))
+        new_x = pb.get_joint_position(world.kitchen, pb.joint_from_name(world.kitchen,
+                                                                        DRAWER_JOINT_NAME))
+        HAND_POSE3D["drawer"] = HAND_POSE3D["drawer"] + np.array([new_x, 0., 0.])
+    elif act == "close_drawer":
+        world.close_door(pb.joint_from_name(world.kitchen, DRAWER_JOINT_NAME))
+        new_x = pb.get_joint_position(world.kitchen, pb.joint_from_name(world.kitchen,
+                                                                        DRAWER_JOINT_NAME))
+        HAND_POSE3D["drawer"] = HAND_POSE3D["drawer"] - np.array([new_x, 0., 0.])
+    elif act == "pick_up_spamatc":
+        # TODO Move spam to link grasp
+        return
+    elif act == "put_down_spamatd":
+        # Move spam to inside drawer and out of link grasp
+        # spam_pose = put_down_spam()
+        # HAND_POSE3D["spam"] = spam_pose[0] + np.array([0., 0., 0.2])
+        # TODO move spam out of link grasp
+        return
+    elif act == "pick_up_sugaratb":
+        # TODO Move sugar to link grasp
+        return
+    elif act == "put_down_sugaratc":
+        # Move sugar to counter surface and out of link grasp
+        sugar_pose = put_down_sugar(world, COUNTER_NAME)
+        HAND_POSE3D["sugar"] = sugar_pose[0] + np.array([0., 0., 0.2])
+        # TODO move sugar out of link grasp
+    else:
+        print("[secondary_effects] WARNING: got invalid action ", act)
+
 
 if __name__ == "__main__":
     print("Random seed:", pb.get_random_seed())
     print("Numpy seed:", pb.get_numpy_seed())
 
     world = World(use_gui=True)
+    # world = World(use_gui=False)
+
+    # TODO delete
+    print("All links = ")
+    print([pb.get_link_name(world.kitchen, link) for link in pb.get_all_links(world.kitchen)])
 
     # Set up simulation world as expected
-    # NOTE: Leaving `counter` argument from example out because it has no effect.
-    name_sugar, pose_sugar = add_sugar_box(world, pose2d=INIT_POSE_SUGAR)
-    name_spam, pose_spam = add_spam_box(world, pose2d=INIT_POSE_SPAM)
-    print("{} pose = {}".format(name_sugar, pose_sugar))
-    print("{} pose = {}".format(name_spam, pose_spam))
+    _, pose_sugar = add_sugar_box(world, pose2d=INIT_POSE_SUGAR)
+    _, pose_spam = add_spam_box(world, pose2d=INIT_POSE_SPAM)
 
-    # Save object goal locations for later
+    # Populate goal locations
     HAND_POSE3D["sugar"] = pose_sugar[0] + np.array([0., 0., 0.2])
     HAND_POSE3D["spam"] = pose_spam[0] + np.array([0., 0., 0.2])
-
-    pb.wait_for_user()
+    # Drawer location should be at handle to start
+    HAND_POSE3D["drawer"] = pb.get_com_pose(world.kitchen,
+                                            pb.link_from_name(world.kitchen, "indigo_drawer_handle_top"))[0]
+    print(HAND_POSE3D)
+    HAND_POSE3D["drawer"] = np.array([0.35, 1.15, -0.57])
 
     # Move robot to starting position to get in gripping range
-    pb.set_joint_positions(world.robot, world.base_joints, BASE_POSE2D["left"])
-    pb.wait_for_user()
     pb.set_joint_positions(world.robot, world.base_joints, BASE_POSE2D["right"])
     pb.wait_for_user()
 
-    # TODO set up RobotPlanner object that reads in PDDL files and initializes activity + motion planners
+    # TODO delete
+    locs = ["range", "indigo_countertop", "indigo_drawer_top", "indigo_drawer_handle_top"]
+    for loc in locs:
+        print("{} location = ".format(loc))
+        link = pb.link_from_name(world.kitchen, loc)
+        print(pb.get_com_pose(world.kitchen, link))
+        print("\tAABB = ", pb.get_aabb(world.kitchen, link))
 
-    # Move from start to sugar box using RRT
+    # Read in activity plan from file
+    with open(ACTIVITY_PLAN_FILE, "r") as fp:
+        activity_plan = fp.readlines()
+    activity_plan = [line.strip() for line in activity_plan]
+    print("Read in activity plan: ", activity_plan)
+    pb.wait_for_user()
+
+    # Get path and command arm for each activity
     tool_link = pb.link_from_name(world.robot, "panda_hand")
-    start_pose = pb.get_link_pose(world.robot, tool_link)
-    rrt_path = rrt(world, start_pose, HAND_POSE3D["sugar"])
-    print("Path received = ")
-    print(rrt_path)
+    ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
+    for act in activity_plan:
+        start_pose = pb.get_link_pose(world.robot, tool_link)
+        goal_pose = pb.Pose(point=HAND_POSE3D[ACTIVITY_GOAL_LOC[act]],
+                            euler=pb.euler_from_quat(start_pose[1]))
+        path = rrt(world, start_pose, goal_pose, tolerance=0.07, d_steer=0.5)
+        print("Path received for {} = {}\n".format(act, path))
+        print("\tstart_pose = ", pb.get_joint_positions(world.robot, ik_joints))
+        move_arm(world, tool_link, path)
+        print("\tend pose = ", pb.get_joint_positions(world.robot, ik_joints))
+        secondary_effects(world, act)
+        pb.wait_for_user()
+
+    print("Done executing plan!")
+    pb.wait_for_user()
+
+
+"""
+All links = 
+['world', 'sektion', 'walls', 'extractor_hood', 'range', 'front_left_stove', 'front_right_stove',
+'back_left_stove', 'back_right_stove', 'control_panel', 'back_left_knob', 'front_left_knob',
+'back_right_knob', 'front_right_knob', 'baker_anchor_link', 'baker_link_tmp', 'baker_link',
+'baker_handle', 'chewie_door_right_anchor_link', 'chewie_door_right_link_tmp',
+'chewie_door_right_link', 'chewie_door_right_handle', 'chewie_door_left_anchor_link',
+'chewie_door_left_link_tmp', 'chewie_door_left_link', 'chewie_door_left_handle', 'dagger', 
+'dagger_door_left_anchor_link', 'dagger_door_left_link_tmp', 'dagger_door_left_link', 
+'dagger_door_left_handle', 'dagger_door_right_anchor_link', 'dagger_door_right_link_tmp', 
+'dagger_door_right_link', 'dagger_door_right_handle', 'hitman_tmp', 'hitman_countertop', 
+'hitman', 'hitman_drawer_top', 'hitman_drawer_top_front', 'hitman_drawer_handle_top', 
+'hitman_drawer_bottom', 'hitman_drawer_bottom_front', 'hitman_drawer_handle_bottom', 'indigo_tmp', 
+'indigo_countertop', 'indigo', 'indigo_door_right_anchor_link', 'indigo_door_right_joint_anchor_link',
+'indigo_door_right_link', 'indigo_door_right', 'indigo_door_right_nob_link', 
+'indigo_door_left_anchor_link', 'indigo_door_left_joint_anchor_link', 'indigo_door_left_link', 
+'indigo_door_left', 'indigo_door_left_nob_link', 'indigo_drawer_top', 'indigo_drawer_handle_top', 
+'indigo_drawer_bottom', 'indigo_drawer_handle_bottom']
+"""
