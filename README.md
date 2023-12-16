@@ -219,7 +219,7 @@ Unfortunately, most of the truly time-consuming challenges we encountered involv
 
 ## Individual Contributions
 
-The team collectively deliberated on all aspects, and in terms of execution, Anjali focused on Parts 1 (Activity Planning) & 3 (Trajectory Optimization), and Aneesa implemented Part 2 (Motion Planning).
+The team collectively deliberated on all aspects, and in terms of execution, Anjali focused on Parts 1 (Activity Planning) & 3 (Trajectory Optimization), and Aneesa implemented Part 2 (Motion Planning) and the simulation interaction.
 
 ## References
  - Course lectures
