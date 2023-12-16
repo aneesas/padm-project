@@ -166,7 +166,8 @@ If implementing this for a real-world test, we might want to augment this motion
     - Goal-biasing frequency
 
 
-
+## Video
+Video below is one full plan (generated with the activity planner) executed with RRT-based motion-planning. Note that the video is at 1.5x speed (for video size/length), and the watermark is from the tool used to speed up the screen recording to 1.5x. The long delays from running RRT are obvious in between the executed steps. Note also that the objects aren't actually _grasped_ by the gripper--we never actually figured out how to do this, and since it wasn't part of the intended activity or motion plan, we simply moved the objects after the arm completed the relevant step in the plan.
 
 https://github.com/aneesas/padm-project/assets/9471211/033943f6-df3f-406b-a1c4-0d04d4259055
 
@@ -205,10 +206,16 @@ Here is an example of the robot executing the optimized trajectory for the actio
 
 
 ## Result Comparison
-The resulting optimized trajectory can be compared to the initial sample-based motion plan by evaluating the difference in joint angles and assessing the smoothness and efficiency of motion.
+The resulting optimized trajectory can be compared to the initial sample-based motion plan above (see earlier video, first motion performed by the robot). The optimized trajectory is much smoother than the original one, but it covers far more distance in Euclidean space. We believe this is due to our formulation of the optimization problem in joint configuration space vs. running our motion planner in Euclidean space. The trajectory optimizer is limited to continuous motion along the individual joint angles towards the goal joint angles, whereas the motion planner computes "nearness" as a 3-D distance to the goal position.
 
 # Conclusion
 ## Reflection & Discussion
+This project highlighted the importance of planner design decisions in developing an autonomous system that can 1. achieve its intended goals, 2. in a reasonable amount of time, and 3. without generating too much inefficiency. We see the effects of our design choices in:
+- Including movement of the arm from position to position as an action in the activity plan; on reflection, we could have left the `move_to_` actions out and let the motion planner handle that aspect. We would have likely had faster resulting execution had we done this.
+- Planning in Euclidean vs. joint configuration space--as described above, we can see the difference in what the optimized trajectory looks like vs. our sample-based motion plan.
+- Offline vs. online planning--we generated the full activity plan offline, but did the motion planning online, and the consequences are evident in the lag between actions in the video above.
+
+Unfortunately, most of the truly time-consuming challenges we encountered involved working with the pybullet simulation. While powerful and extensive, it has an extremely steep learning curve, and focusing on this aspect of the project was not as illuminating as far as how to design/implement effective planners.
 
 ## Individual Contributions
 
