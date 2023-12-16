@@ -69,24 +69,24 @@ def secondary_effects(world, tool_link, act):
         new_x = pb.get_joint_position(world.kitchen, pb.joint_from_name(world.kitchen,
                                                                         DRAWER_JOINT_NAME))
         HAND_POSE3D["drawer"] = HAND_POSE3D["drawer"] - np.array([new_x/2., 0., 0.])
+        x, y, z = HAND_POSE3D["spam"] - np.array([new_x/2., 0., 0.])
+        spam_body = world.get_body(SPAM)
+        spam_pose = pb.Pose(pb.Point(x, y, z), pb.Euler(yaw=np.pi/4))
+        pb.set_pose(spam_body, spam_pose)
     elif act == "pick_up_spamatc":
-        # TODO Move spam to link grasp
         return
     elif act == "put_down_spamatd":
         # Move spam to inside drawer and out of link grasp
         spam_pose = put_down_spam(world)
-        HAND_POSE3D["spam"] = spam_pose[0] + np.array([0., 0., 0.2])
-        # TODO move spam out of link grasp
+        HAND_POSE3D["spam"] = spam_pose[0]
         return
     elif act == "pick_up_sugaratb":
-        # TODO Move sugar to link grasp
         return
     elif act == "put_down_sugaratc":
         # Move sugar to counter surface and out of link grasp
         pos, _ = pb.get_link_pose(world.robot, tool_link)
         sugar_pose = put_down_sugar(world, pos, COUNTER_NAME)
-        HAND_POSE3D["sugar"] = sugar_pose[0] + np.array([0., 0., 0.2])
-        # TODO move sugar out of link grasp
+        HAND_POSE3D["sugar"] = sugar_pose[0]
     else:
         print("[secondary_effects] WARNING: got invalid action ", act)
 
@@ -96,7 +96,6 @@ if __name__ == "__main__":
     print("Numpy seed:", pb.get_numpy_seed())
 
     world = World(use_gui=True)
-    # world = World(use_gui=False)
 
     # Set up simulation world as expected
     _, pose_sugar = add_sugar_box(world, pose2d=INIT_POSE_SUGAR)
@@ -125,7 +124,7 @@ if __name__ == "__main__":
         start_pose = pb.get_link_pose(world.robot, tool_link)
         goal_pose = pb.Pose(point=HAND_POSE3D[ACTIVITY_GOAL_LOC[act]],
                             euler=pb.euler_from_quat(start_pose[1]))
-        path = rrt(world, start_pose, goal_pose, tolerance=0.07, d_steer=0.5)
+        path = rrt(world, start_pose, goal_pose, tolerance=0.05, d_steer=0.5)
         print("Path received for {} = {}\n".format(act, path))
         move_arm(world, tool_link, path)
         secondary_effects(world, tool_link, act)
@@ -133,24 +132,3 @@ if __name__ == "__main__":
 
     print("Done executing plan!")
     pb.wait_for_user()
-
-
-"""
-All links = 
-['world', 'sektion', 'walls', 'extractor_hood', 'range', 'front_left_stove', 'front_right_stove',
-'back_left_stove', 'back_right_stove', 'control_panel', 'back_left_knob', 'front_left_knob',
-'back_right_knob', 'front_right_knob', 'baker_anchor_link', 'baker_link_tmp', 'baker_link',
-'baker_handle', 'chewie_door_right_anchor_link', 'chewie_door_right_link_tmp',
-'chewie_door_right_link', 'chewie_door_right_handle', 'chewie_door_left_anchor_link',
-'chewie_door_left_link_tmp', 'chewie_door_left_link', 'chewie_door_left_handle', 'dagger', 
-'dagger_door_left_anchor_link', 'dagger_door_left_link_tmp', 'dagger_door_left_link', 
-'dagger_door_left_handle', 'dagger_door_right_anchor_link', 'dagger_door_right_link_tmp', 
-'dagger_door_right_link', 'dagger_door_right_handle', 'hitman_tmp', 'hitman_countertop', 
-'hitman', 'hitman_drawer_top', 'hitman_drawer_top_front', 'hitman_drawer_handle_top', 
-'hitman_drawer_bottom', 'hitman_drawer_bottom_front', 'hitman_drawer_handle_bottom', 'indigo_tmp', 
-'indigo_countertop', 'indigo', 'indigo_door_right_anchor_link', 'indigo_door_right_joint_anchor_link',
-'indigo_door_right_link', 'indigo_door_right', 'indigo_door_right_nob_link', 
-'indigo_door_left_anchor_link', 'indigo_door_left_joint_anchor_link', 'indigo_door_left_link', 
-'indigo_door_left', 'indigo_door_left_nob_link', 'indigo_drawer_top', 'indigo_drawer_handle_top', 
-'indigo_drawer_bottom', 'indigo_drawer_handle_bottom']
-"""

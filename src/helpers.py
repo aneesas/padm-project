@@ -35,16 +35,17 @@ class Node():
 
 ### Simulation helpers
 # Helper functions from minimal_example.py
-def add_ycb(world, ycb_type, counter=0, **kwargs) -> (str, tuple):
+def add_ycb(world, ycb_type, counter=0, **kwargs) -> (str, pb.Pose):
     name = name_from_type(ycb_type)
     world.add_body(name, color=np.ones(4))
     pose = pose2d_on_surface(world, name, COUNTERS[counter], **kwargs)
     return name, pose
 
 
-def pose2d_on_surface(world, entity_name, surface_name, pose2d=(0., 0., 0.)):
+def pose2d_on_surface(world, entity_name: str, surface_name: str, pose2d=(0., 0., 0.)) -> pb.Pose:
     """
-    TODO docstring
+    Creates a 3D pose for the provided object with the z stable on the provided surface.
+
     pose2d: (x, y, yaw)
     """
     x, y, yaw = pose2d
@@ -58,6 +59,13 @@ def pose2d_on_surface(world, entity_name, surface_name, pose2d=(0., 0., 0.)):
 
 
 def move_arm(world, link, path: list):
+    """
+    Takes a path of poses as a list and uses robot arm inverse kinematics to move the end
+    effector through the list of poses. Requires poses to be valid within constraints of
+    robot arm kinematics.
+    
+    link (int): link object for end effector
+    """
     if len(path) == 0:
         print("[move_arm] WARNING: Got empty path!")
         return
@@ -66,13 +74,13 @@ def move_arm(world, link, path: list):
     ik_joints = get_ik_joints(world.robot, PANDA_INFO, link)
     prev_pose = start_pose
 
-    print("\nMoving through path...")
+    print("\n[move_arm] Moving through path...")
     for pose in path:
         interpolated_poses = pb.interpolate_poses(prev_pose, pose, pos_step_size=0.1)
         for p in interpolated_poses:
             conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, link, p, max_time=0.05), None)
             if conf is None:
-                print("Something went wrong!!")
+                print("[move_arm] WARNING: Can't move to desired pose!! ", p)
                 break
             pb.set_joint_positions(world.robot, ik_joints, conf)
         prev_pose = pose
