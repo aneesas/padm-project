@@ -35,16 +35,17 @@ class Node():
 
 ### Simulation helpers
 # Helper functions from minimal_example.py
-def add_ycb(world, ycb_type, counter=0, **kwargs) -> (str, tuple):
+def add_ycb(world, ycb_type, counter=0, **kwargs) -> (str, pb.Pose):
     name = name_from_type(ycb_type)
     world.add_body(name, color=np.ones(4))
     pose = pose2d_on_surface(world, name, COUNTERS[counter], **kwargs)
     return name, pose
 
 
-def pose2d_on_surface(world, entity_name, surface_name, pose2d=(0., 0., 0.)):
+def pose2d_on_surface(world, entity_name: str, surface_name: str, pose2d=(0., 0., 0.)) -> pb.Pose:
     """
-    TODO docstring
+    Creates a 3D pose for the provided object with the z stable on the provided surface.
+
     pose2d: (x, y, yaw)
     """
     x, y, yaw = pose2d
@@ -58,6 +59,13 @@ def pose2d_on_surface(world, entity_name, surface_name, pose2d=(0., 0., 0.)):
 
 
 def move_arm(world, link, path: list):
+    """
+    Takes a path of poses as a list and uses robot arm inverse kinematics to move the end
+    effector through the list of poses. Requires poses to be valid within constraints of
+    robot arm kinematics.
+    
+    link (int): link object for end effector
+    """
     if len(path) == 0:
         print("[move_arm] WARNING: Got empty path!")
         return
@@ -66,36 +74,32 @@ def move_arm(world, link, path: list):
     ik_joints = get_ik_joints(world.robot, PANDA_INFO, link)
     prev_pose = start_pose
 
-    print("\nMoving through path...")
+    print("\n[move_arm] Moving through path...")
     for pose in path:
         interpolated_poses = pb.interpolate_poses(prev_pose, pose, pos_step_size=0.1)
         for p in interpolated_poses:
             conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, link, p, max_time=0.05), None)
             if conf is None:
-                print("Something went wrong!!")
+                print("[move_arm] WARNING: Can't move to desired pose!! ", p)
                 break
             pb.set_joint_positions(world.robot, ik_joints, conf)
         prev_pose = pose
 
     return
 
-def put_down_sugar(world, surface_name="indigo_tmp"):
+def put_down_sugar(world, point_3d, surface_name="indigo_tmp"):
     """Put sugar down on counter and return new sugar pose"""
-    counter_pos, _ = pb.get_link_pose(world.kitchen,
-                                       pb.link_from_name(world.kitchen, surface_name))
-    x, y, _ = counter_pos
+    x, y, _ = point_3d
     pose = pose2d_on_surface(world, SUGAR, surface_name, pose2d=(x, y, np.pi / 4))
     return pose
 
-def put_down_spam(world):
+def put_down_spam(world, drawer_name="indigo_drawer_top"):
     """Put spam down inside drawer and return new spam pose"""
-    range_link = pb.link_from_name(world.kitchen, "range")
-    print("range link = ", range_link)
-    print("range pose = ", pb.get_link_pose(world.kitchen, range_link))
-    print("range pose com = ", pb.get_com_pose(world.kitchen, range_link))
-    print("front right stove pose = ", pb.get_link_pose(world.kitchen, 
-                                                        pb.link_from_name(world.kitchen, "front_right_stove")))
-    print("front right stove com  =  ", pb.get_com_pose(world.kitchen, 
-                                                        pb.link_from_name(world.kitchen, "front_right_stove")))
-    print("countertop state = ")
-    print(pb.get_link_state(world.kitchen, pb.link_from_name(world.kitchen, "indigo_tmp")))
+    link = pb.link_from_name(world.kitchen, drawer_name)
+    aabb = pb.get_aabb(world.kitchen, link)
+    x, y, _ = pb.get_aabb_center(aabb)
+    z = aabb[0][2]  # lower limits, z
+    body = world.get_body(SPAM)
+    pose = pb.Pose(pb.Point(x, y, z), pb.Euler(yaw=np.pi / 4))
+    pb.set_pose(body, pose)
+    return pose
