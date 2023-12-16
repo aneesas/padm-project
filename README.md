@@ -17,12 +17,12 @@ The project was structured to achieve the following objectives:
 
 This module implements an ActivityPlanner class that serves as a solver for activity planning problems utilizing the Planning Domain Definition Language (PDDL).
 
-In this section, our primary task were to first create a domain and problem file using PDDL for a kitchen environment. The specified objectives included removing a sugar box from the burner and stowing a spam box inside a drawer. We then developed an activity planner to produce a proposed plan for execution.
+In this section, our primary task was to first create a domain and problem file using PDDL for a kitchen environment. The specified objectives included removing a sugar box from the burner and stowing a spam box inside a drawer. We then developed an activity planner to produce a proposed plan for execution.
 
 ## Assumptions in Domain Design
 
-During the design of the domain for activity planning, several assumptions were made to model the problem effectively. Assumptions include:
-- There is only one drawer in the environment that we are able to manipulate.
+We made the following assumptions in modeling the problem:
+- There is only one drawer in the environment that we are interested in manipulating.
 - Each location (burner, countertop, inside of drawer) can only hold one item at a time.
 - The robot arm can only hold one item at a time.
 - We can abstract away the details of certain actions, e.g., how the gripper picks up different items.
@@ -42,7 +42,7 @@ During the design of the domain for activity planning, several assumptions were 
 - `solve(self)`: Generates an activity plan based on the input domain and problem files.
 - `_run_bfs_planner(self)`: Implements a breadth-first search planner to find a solution.
     - `generate_possible_actions(self, state)`: Generates possible actions based on the current state.
-    - `apply_action(self, state, action)` - Applies an action to the state and generates a new state.
+    - `apply_action(self, state, action)`: Applies an action to the state and generates a new state.
 - `_extract_activity_plan(self, state, plan, path)`: Extracts the activity plan from the final state.
 
 #### State Class:
@@ -98,33 +98,11 @@ Strategies employed to address these challenges involved:
 
 
 # Deliverable 2: Motion Planning
-The second section involved sample-based motion planning for the robot manipulator within the simulated environment. This required designing a planner for both the manipulator and integrating it with the activity planner.
+The second section involved sample-based motion planning for the robot manipulator within the simulated environment. This required designing a planner for the manipulator and integrating it with the activity planner.
 
 ## Assumptions in Design
-- The robot doesn't need to decide where exactly to place the items once picked up; that is, the location of the countertop and the drawer are known.
+- The robot doesn't need to determine where exactly to place the items once picked up; that is, the location of the countertop and the drawer are known.
 - We are not accounting for the gripper in motion planning (required angle of approach for grasping, positioning of the individual fingers, etc.)
-
-## Approach
-We use a straightforward RRT implementation for the motion planner. The algorithm steps are as follows:
-
-We assume we are given an initial pose (position/orientation pair) and a goal position (3-D, Cartesian), and that we know the bounds of the world and the locations of obstacles within it.
-
-1. Start a tree with the initial pose as the root node.  
-(while a complete path is not found, do:)
-2. Sample a 3-D point from free space.
-3. Check if the sampled point is within an obstacle, and discard it if so.
-4. Find the node in the tree that is closest to the new sampled point.
-5. "Steer" from that closest node to the new sampled point.
-6. Check if this path to the sampled point intersects an obstacle, and discard the new point if so.
-7. Add the new point to the tree with the closest-point node as its parent.
-8. If the new point is "close enough" to the goal position, retrace its path back to the root and return this complete path. Else, repeat from Step 2.
-
-- Explain goal-biasing
-- Explain creation of goal "region" and tolerance used
-- Explain collision-checking
-- Explain arm dynamics (inverse kinematics) and steering (d factor, tuning)
-
-If implementing this for a real-world test, we might want to augment this motion planner to use RRT* instead of RRT, to bring our resulting paths closer to optimality without sacrificing the 
 
 ## Key Files and Functions
 The relevant code lives in the `motion_planning.py` module. Key functions include:
@@ -135,6 +113,33 @@ The relevant code lives in the `motion_planning.py` module. Key functions includ
 - `steer_panda(world, x_from, x_to, obstacles, d)`: Generates a new node in the direction of `x_to` from `x_from`, constrained by robot arm kinematics and distance factor `d`.
 - `near(pose1, pose2, tolerance)`: Checks if two poses are within a specified tolerance in (x, y, z) dimensions.
 - `trace_path(node)`: Returns the path from the tree root to the current node assuming correct parent assignments.
+- `rrt(world, start_pose, goal_pose, tolerance, max_iterations, n_goal_bias, d_steer)`: Implements the algorithm described below with a time-limiting factor of `max_iterations` to prevent endless churning.
+
+## Approach
+We use a straightforward RRT implementation for the motion planner. We assume we are given an initial pose (position/orientation pair) and a goal position (3-D, Cartesian), and that we know the bounds of the world and the locations of obstacles within it.
+
+The algorithm steps are:
+
+0. Start a tree with the initial pose as the root node.  
+    - For each step in the activity plan, we take the current end effector pose as the initial pose.
+
+(while a complete path is not found, do:)
+1. Sample a 3-D point from free space within some specified bounds.  
+    - We use a cube defined by (x, y, z) bounds approximated from the sim environment.  
+    - We also added goal-biasing: every `N` samples (default 10), choose the goal pose instead of sampling from free space.
+2. Check if the sampled point is within an obstacle, and discard it if so.  
+    - We defiine our obstacles as the set of AABB shapes/limits from the sim kitchen object. If a generated 3-D point is within any of these bounding boxes, it is within an obstacle.
+3. Find the node in the tree that is closest to the new sampled point.  
+    - We use simple Euclidean distance for this, as defined in the `near` function.
+4. "Steer" from that closest node to the new sampled point.
+    - Implemented in `steer_panda`, we use the supplied inverse kinematics determine how far along the new path the end effector is able to move. We limit the total distance by a fractional factor so that any one steering action does not result in the arm being fully extended/contracted in a position that is difficult to maneuver out of.
+5. Check if this path to the sampled point intersects an obstacle, and discard the new point if so.  
+    - We use the same obstacles as before, for each interpolated pose along the steering path.
+6. Add the new point to the tree with the closest-point node as its parent.
+7. If the new point is "close enough" to the goal position, retrace its path back to the root and return this complete path. Else, repeat from Step 1.  
+    - Input parameter `tolerance` determines what is "close enough" to the goal.
+
+If implementing this for a real-world test, we might want to augment this motion planner to use RRT* instead of RRT, to bring our resulting paths closer to optimality without sacrificing the sparsity benefits of RRT.
 
 ## Challenges
 - The vast majority of our effort for this task was in working with the actual simulation, rather than in implementing our motion planner. The sim is large, complex, and difficult to navigate through function signatures alone. This was, overall, both challenging and frustrating. We elaborate on some particular challenges below that extend beyond this simulation environment.
@@ -149,12 +154,20 @@ The relevant code lives in the `motion_planning.py` module. Key functions includ
 - We have the ability to compute arm joint angle configurations from (position, orientation) poses using the provided inverse kinematics solution; however, we found ourselves wanting the forward kinematics as well to compute what the pose of the end effector _would_ be for a particular possible angle configuration.
 - Not all positions returned when querying the simulator are given in the world coordinate frame. Having these different reference frames and coordinates is useful and powerful, but requires thorough bookkeeping and a deeper knowledge of the ins and outs of the simulation and robot dynamics than we had. For this project, we resolved the issue by purely working with the gripper in Cartesian space and letting the provided IK tools compute the corresponding valid joint configurations, but in an actual application, we would want to implement tools to switch freely between reference frames and coordinates.
 
-**Computation and robustness:**
-- Speed of RRT
-- Randomness means convergence isn't consistent in timing
-- The current implementation plans before each action. It is possible to do it all offline before execution, but then that doesn't work as well in the real world where you have to adapt/react in presence of uncertainty (which we implemented via adding tolerances).
+**Computation, tuning, and robustness:**
+- The randomness of RRT means convergence to a valid path can take a highly variable amount of time. This can be fine for offline planning, but we planned each motion right before execution in order to account for any variation in starting positions between subsequent actions (due to the `tolerance` parameter of the `rrt` function). In real-world execution, we would want fast online planning that can adapt/react to changes or uncertainty in the environment. The video below shows the lag between actions from the motion planner running. Possible bottlenecks in the algorithm:
+    - Computing inverse kinematics for each set of interpolated poses (we tuned to 0.04 as a step size for interpolation)
+    - Checking each interpolated pose along each candidate path for collisions
+
+- The speed and success of RRT is sensitive to the input parameters, particularly because the desired start/end positions were all quite close to each other in space. These include:
+    - Steering distance `d`--need to move far enough along each sampled trajectory without getting stuck in odd positions or creating a very spread-out tree
+    - Tolerance for reaching goal--as before, how close is close enough?
+    - Step size for interpolated poses in steering function--because the overall distances as small, this needed to be tuned to be small enough to provide valid motion while also not being so small as to wildly slow down execution
+    - Goal-biasing frequency
 
 
+## Video
+Video below is one full plan (generated with the activity planner) executed with RRT-based motion-planning. Note that the video is at 1.5x speed (for video size/length), and the watermark is from the tool used to speed up the screen recording to 1.5x. The long delays from running RRT are obvious in between the executed steps. Note also that the objects aren't actually _grasped_ by the gripper--we never actually figured out how to do this, and since it wasn't part of the intended activity or motion plan, we simply moved the objects after the arm completed the relevant step in the plan.
 
 https://github.com/aneesas/padm-project/assets/9471211/033943f6-df3f-406b-a1c4-0d04d4259055
 
@@ -193,10 +206,16 @@ Here is an example of the robot executing the optimized trajectory for the actio
 
 
 ## Result Comparison
-The resulting optimized trajectory can be compared to the initial sample-based motion plan by evaluating the difference in joint angles and assessing the smoothness and efficiency of motion.
+The resulting optimized trajectory can be compared to the initial sample-based motion plan above (see earlier video, first motion performed by the robot). The optimized trajectory is much smoother than the original one, but it covers far more distance in Euclidean space. We believe this is due to our formulation of the optimization problem in joint configuration space vs. running our motion planner in Euclidean space. The trajectory optimizer is limited to continuous motion along the individual joint angles towards the goal joint angles, whereas the motion planner computes "nearness" as a 3-D distance to the goal position.
 
 # Conclusion
 ## Reflection & Discussion
+This project highlighted the importance of planner design decisions in developing an autonomous system that can 1. achieve its intended goals, 2. in a reasonable amount of time, and 3. without generating too much inefficiency. We see the effects of our design choices in:
+- Including movement of the arm from position to position as an action in the activity plan; on reflection, we could have left the `move_to_` actions out and let the motion planner handle that aspect. We would have likely had faster resulting execution had we done this.
+- Planning in Euclidean vs. joint configuration space--as described above, we can see the difference in what the optimized trajectory looks like vs. our sample-based motion plan.
+- Offline vs. online planning--we generated the full activity plan offline, but did the motion planning online, and the consequences are evident in the lag between actions in the video above.
+
+Unfortunately, most of the truly time-consuming challenges we encountered involved working with the pybullet simulation. While powerful and extensive, it has an extremely steep learning curve, and focusing on this aspect of the project was not as illuminating as far as how to design/implement effective planners.
 
 ## Individual Contributions
 
