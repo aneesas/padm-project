@@ -1,16 +1,23 @@
 Final Project Repo for Aneesa &amp; Anjali  
 MIT 16.413 - Fall 2023
 
-# Tasks
-- Writeup for trajopt
-- Video of trajopt
-- Locations for HAND_POSE3D in run_simulation
-- How to move objects to gripper??? How to move out of gripper???
+# Introduction 
 
+This project comprises three main components: Activity Planning, Motion Planning, and Trajectory Optimization, each tackling distinct challenges in the realm of robot manipulation within a simulated kitchen environment.
+
+## Learning Objectives
+The project was structured to achieve the following objectives:
+
+- Designing PDDL domain and problem files for task planning.
+- Implementing an activity planner using various techniques studied in the course.
+- Developing sample-based motion planning algorithms for the robot's manipulator.
+- Utilizing trajectory optimization techniques to refine motion plans for smoother execution.
 
 # Deliverable 1: Activity Planning
 
 This module implements an ActivityPlanner class that serves as a solver for activity planning problems utilizing the Planning Domain Definition Language (PDDL).
+
+In this section, our primary task were to first create a domain and problem file using PDDL for a kitchen environment. The specified objectives included removing a sugar box from the burner and stowing a spam box inside a drawer. We then developed an activity planner to produce a proposed plan for execution.
 
 ## Assumptions in Domain Design
 
@@ -20,7 +27,7 @@ During the design of the domain for activity planning, several assumptions were 
 - The robot arm can only hold one item at a time.
 - We can abstract away the details of certain actions, e.g., how the gripper picks up different items.
 
-## Files and Functions Overview
+## Files and Key Functions
 
 ### Files:
 - `src/activity_planner.py`: Implements the `ActivityPlanner` class that serves as the core of the activity planning functionality.
@@ -64,16 +71,35 @@ Strategies employed to address these challenges involved:
 - Extensive testing and validation of the PDDL parsing functionalities.
 - Experimenting with different planning algorithms and heuristics to optimize the solution process. The structure of the code allows for ease in switching between different planners if we were to implement other kinds as well.
 
-## Example Result
-Initial State:  {('clear_gripper',), ('countertop_has_spambox',), ('at_drawer',), ('burner_has_sugarbox',), ('clear_drawer',)}
+## Example Plan for Specified Task
+**Initial State:**
+- 'clear_gripper'
+- 'countertop_has_spambox'
+- 'at_drawer'
+- 'burner_has_sugarbox'
+- 'clear_drawer'
 
-Goal State:  {('countertop_has_sugarbox',), ('drawer_has_spambox',)} and not {('open_drawer',)}
+**Goal State:**
+- 'countertop_has_sugarbox'
+- 'drawer_has_spambox'
+- not 'open_drawer'
 
-Generated Plan: 
-['open_drawer', 'movedtoc', 'pick_up_spamatc', 'movectod', 'put_down_spamatd', 'close_drawer', 'movedtob', 'pick_up_sugaratb', 'movebtoc', 'put_down_sugaratc']  
+**Generated Plan:**
+1. open_drawer (Open the drawer)
+2. movedtoc (Move from drawer to countertop)
+3. pick_up_spamatc (Pick up spam box from countertop)
+4. movectod (Move from countertop to drawer)
+5. put_down_spamatd (Put down spam box in the drawer)
+6. close_drawer (Close the drawer)
+7. movedtob (Move from drawer to burner)
+8. pick_up_sugaratb (Pick up sugar box from burner)
+9. movebtoc (Move from burner to countertop)
+10. put_down_sugaratc (Put down sugar box at countertop)
 
 
 # Deliverable 2: Motion Planning
+The second section involved sample-based motion planning for the robot manipulator within the simulated environment. This required designing a planner for both the manipulator and integrating it with the activity planner.
+
 ## Assumptions in Design
 - The robot doesn't need to decide where exactly to place the items once picked up; that is, the location of the countertop and the drawer are known.
 - We are not accounting for the gripper in motion planning (required angle of approach for grasping, positioning of the individual fingers, etc.)
@@ -101,21 +127,83 @@ We assume we are given an initial pose (position/orientation pair) and a goal po
 If implementing this for a real-world test, we might want to augment this motion planner to use RRT* instead of RRT, to bring our resulting paths closer to optimality without sacrificing the 
 
 ## Key Files and Functions
-The relevant code lives in the `motion_planning.py` module.
-Connect to steps in approach above, or just name them in Approach section
+The relevant code lives in the `motion_planning.py` module. Key functions include:
+- `sample(bounds)`: Generates a random 3D point within specified bounds.
+- `in_obstacle(world, node, obstacles)`: Checks if a given node position is within any obstacles in the world.
+- `distance(node1, node2)`: Calculates the Euclidean distance between two nodes.
+- `nearest_node(V, node)`: Finds the closest node in the given tree `V` based on Euclidean distance.
+- `steer_panda(world, x_from, x_to, obstacles, d)`: Generates a new node in the direction of `x_to` from `x_from`, constrained by robot arm kinematics and distance factor `d`.
+- `near(pose1, pose2, tolerance)`: Checks if two poses are within a specified tolerance in (x, y, z) dimensions.
+- `trace_path(node)`: Returns the path from the tree root to the current node assuming correct parent assignments.
 
 ## Challenges
-The vast majority of our effort for this task was in working with the actual simulation, rather than in implementing our motion planner. The sim is large, complex, and difficult to navigate through function signatures alone. This was, overall, both challenging and frustrating. We elaborate on some particular challenges below that extend beyond this simulation environment.
+- The vast majority of our effort for this task was in working with the actual simulation, rather than in implementing our motion planner. The sim is large, complex, and difficult to navigate through function signatures alone. This was, overall, both challenging and frustrating. We elaborate on some particular challenges below that extend beyond this simulation environment.
 
-**Positioning and obstacle avoidance:** The Franka arm has many separate components with many degrees of freedom (arm joints + gripper joints). The positions returned by pybullet for the gripper tool are, to our understanding, centered positions, meaning the actual shape/extent of the gripper should be taken into account when avoiding obstacles. However, since we were not working with manipulating the gripper itself in this project, it was difficult to determine end goal positions for the motion planner that would put the gripper in a believable spot to perform the subsequent action in the activity plan. (E.g., is the gripper close enough to the spam box to actually pick it up, without having the fingers going right through the box?) In an actual implementation, there would be a lot more bookkeeping (and planning!) necessary to maneuver the complete arm to perform the tasks at hand.
+**Positioning and obstacle avoidance:** 
+- The Franka arm has many separate components with many degrees of freedom (arm joints + gripper joints). The positions returned by pybullet for the gripper tool are, to our understanding, centered positions, meaning the actual shape/extent of the gripper should be taken into account when avoiding obstacles. 
+- However, since we were not working with manipulating the gripper itself in this project, it was difficult to determine end goal positions for the motion planner that would put the gripper in a believable spot to perform the subsequent action in the activity plan.
+    - E.g., is the gripper close enough to the spam box to actually pick it up, without having the fingers going right through the box?) 
+- In an actual implementation, there would be a lot more bookkeeping (and planning!) necessary to maneuver the complete arm to perform the tasks at hand.
 
-**Frames:** We have the ability to compute arm joint angle configurations from (position, orientation) poses using the provided inverse kinematics solution; however, we found ourselves wanting the forward kinematics as well to compute what the pose of the end effector _would_ be for a particular possible angle configuration. Additionally, not all positions returned when querying the simulator are given in the world coordinate frame. Having these different reference frames and coordinates is useful and powerful, but requires thorough bookkeeping and a deeper knowledge of the ins and outs of the simulation and robot dynamics than we had. For this project, we resolved the issue by purely working with the gripper in Cartesian space and letting the provided IK tools compute the corresponding valid joint configurations, but in an actual application, we would want to implement tools to switch freely between reference frames and coordinates.
+**Frames:** 
+- We have the ability to compute arm joint angle configurations from (position, orientation) poses using the provided inverse kinematics solution; however, we found ourselves wanting the forward kinematics as well to compute what the pose of the end effector _would_ be for a particular possible angle configuration.
+- Not all positions returned when querying the simulator are given in the world coordinate frame. Having these different reference frames and coordinates is useful and powerful, but requires thorough bookkeeping and a deeper knowledge of the ins and outs of the simulation and robot dynamics than we had. For this project, we resolved the issue by purely working with the gripper in Cartesian space and letting the provided IK tools compute the corresponding valid joint configurations, but in an actual application, we would want to implement tools to switch freely between reference frames and coordinates.
 
 **Computation and robustness:**
-- speed of RRT
-- randomness means convergence isn't consistent in timing
-- current implementation plans before each action--possible to do it all offline before execution, but then that doesn't work as well in the real world where you have to adapt/react in presence of uncertainty
+- Speed of RRT
+- Randomness means convergence isn't consistent in timing
+- The current implementation plans before each action. It is possible to do it all offline before execution, but then that doesn't work as well in the real world where you have to adapt/react in presence of uncertainty (which we implemented via adding tolerances).
 
 # Deliverable 3: Trajectory Optimization
-### Something
-- asdf
+
+The final section focused on trajectory optimization to refine the motion plans generated by sample-based planners. Using pyDrake, we aimed to optimize a free space manipulator trajectory.
+
+## Files and Key Functions
+The primary file is `trajectory_optimizer.py`, containing the `TrajectoryOptimizer` class. Key functions include:
+- `__init__`: Initializes the optimizer with start and goal joint angles.
+- `optimize_trajectory`: Performs joint trajectory optimization based on constraints and goals. Constraints are added to a Mathematical Program (via pydrake). The cost we are trying to minimize is the squared distance from the current joint angle configuration to the goal state joint angles.
+
+## Solver Used
+The code utilizes the `SnoptSolver` from PyDrake for solving the optimization problem.
+
+## Optimization Problem
+The optimization problem aims to find an optimal joint trajectory that navigates from a given start configuration to a specified goal configuration while respecting joint angle limits and velocity constraints.
+
+
+### Formalization
+![Problem](trajopt_problemformalization.png)
+
+
+## Challenges Faced
+During the implementation, several challenges were encountered, such as:
+- Balancing constraints and the objective function for effective convergence.
+- Tuning the duration and the number of timesteps for optimal trajectory generation.
+- Handling convergence failures and adjusting solver parameters.
+
+## Example Plan
+Here is an example of the robot executing the optimized trajectory for the action 'Move from Burner to Drawer'
+
+![Robot Execution Video](movebtod_video.gif)
+
+
+## Result Comparison
+The resulting optimized trajectory can be compared to the initial sample-based motion plan by evaluating the difference in joint angles and assessing the smoothness and efficiency of motion.
+
+# Conclusion
+## Reflection & Discussion
+
+## Individual Contributions
+
+The team collectively deliberated on all aspects, and in terms of execution, Anjali focused on Parts 1 (Activity Planning) & 3 (Trajectory Optimization), and Aneesa implemented Part 2 (Motion Planning).
+
+## References
+ - Course lectures
+ - Underactuated Robotics relevant chapters
+
+
+
+
+
+
+
+
